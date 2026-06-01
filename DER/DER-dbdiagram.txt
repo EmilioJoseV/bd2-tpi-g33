@@ -1,0 +1,142 @@
+Project DER_TPI_Inventario_y_ventas_indumentaria {
+  database_type: 'SQL Server'
+  Note: '''
+  Sistema de inventario y ventas para una tienda de indumentaria.
+  '''
+}
+
+Table Categorias {
+  IdCategoria int [pk, increment]
+  Nombre varchar(100) 
+  Descripcion varchar(255)
+  Activo bit 
+}
+
+Table Marcas {
+  IdMarca int [pk, increment]
+  Nombre varchar(100) 
+  Descripcion varchar(255)
+  Activo bit 
+}
+
+Table Talles {
+  IdTalle int [pk, increment]
+  Nombre varchar(20) 
+  Descripcion varchar(100)
+  Activo bit 
+}
+
+Table Colores {
+  IdColor int [pk, increment]
+  Nombre varchar(50) 
+  Activo bit 
+}
+
+Table MediosPago {
+  IdMedioPago int [pk, increment]
+  Nombre varchar(100) 
+  Activo bit 
+}
+
+Table EstadosVenta {
+  IdEstadoVenta int [pk, increment]
+  Nombre varchar(50) 
+  Descripcion varchar(255)
+}
+
+Table EstadosCompra {
+  IdEstadoCompra int [pk, increment]
+  Nombre varchar(50) 
+  Descripcion varchar(255)
+}
+
+Table Proveedores {
+  IdProveedor int [pk, increment]
+  RazonSocial varchar(150) 
+  CUIT varchar(20) 
+  Email varchar(150)
+  Telefono varchar(30)
+  Direccion varchar(200)
+  Activo bit 
+}
+
+Table Clientes {
+  IdCliente int [pk, increment]
+  Apellido varchar(100) 
+  Nombre varchar(100) 
+  Documento varchar(20) 
+  Email varchar(150)
+  Telefono varchar(30)
+  FechaAlta date 
+  Activo bit 
+}
+
+Table Empleados {
+  IdEmpleado int [pk, increment]
+  Apellido varchar(100) 
+  Nombre varchar(100) 
+  Documento varchar(20) 
+  Email varchar(150)
+  Telefono varchar(30)
+  FechaAlta date 
+  Activo bit 
+}
+
+Table Productos {
+  IdProducto int [pk, increment]
+  IdCategoria int 
+  IdMarca int
+  IdTalle int
+  IdColor int
+  CodigoProducto varchar(50) 
+  Nombre varchar(150) 
+  Descripcion varchar(255)
+  PrecioVenta decimal(12,2) 
+  StockActual int 
+  StockMinimo int 
+  Activo bit 
+}
+
+Table Compras {
+  IdCompra int [pk, increment]
+  IdProveedor int 
+  IdEmpleado int 
+  IdEstadoCompra int 
+  FechaCompra datetime2 
+  NumeroComprobante varchar(50)
+  Total decimal(12,2)
+}
+
+Table DetalleCompras {
+  IdDetalleCompra int [pk, increment]
+  IdCompra int 
+  IdProducto int 
+  Cantidad int 
+  PrecioUnitario decimal(12,2) 
+  Subtotal decimal(12,2) 
+}
+
+Table Ventas {
+  IdVenta int [pk, increment]
+  IdCliente int 
+  IdEmpleado int 
+  IdMedioPago int 
+  IdEstadoVenta int 
+  FechaVenta datetime2 
+  Total decimal(12,2) 
+}
+
+/* Relaciones de las tablas */
+Ref: Categorias.IdCategoria < Productos.IdCategoria
+Ref: Marcas.IdMarca < Productos.IdMarca
+Ref: Talles.IdTalle < Productos.IdTalle
+Ref: Colores.IdColor < Productos.IdColor
+Ref: Proveedores.IdProveedor < Compras.IdProveedor
+Ref: Empleados.IdEmpleado < Compras.IdEmpleado
+Ref: EstadosCompra.IdEstadoCompra < Compras.IdEstadoCompra
+Ref: Compras.IdCompra < DetalleCompras.IdCompra
+Ref: Productos.IdProducto < DetalleCompras.IdProducto
+Ref: Clientes.IdCliente < Ventas.IdCliente
+Ref: Empleados.IdEmpleado < Ventas.IdEmpleado
+Ref: MediosPago.IdMedioPago < Ventas.IdMedioPago
+Ref: EstadosVenta.IdEstadoVenta < Ventas.IdEstadoVenta
