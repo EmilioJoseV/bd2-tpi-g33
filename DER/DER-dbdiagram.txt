@@ -7,124 +7,160 @@ Project DER_TPI_Inventario_y_ventas_indumentaria {
 
 Table Categorias {
   IdCategoria int [pk, increment]
-  Nombre varchar(100) 
+  Nombre varchar(100) [not null, unique]
   Descripcion varchar(255)
-  Activo bit 
-}
-
-Table Marcas {
-  IdMarca int [pk, increment]
-  Nombre varchar(100) 
-  Descripcion varchar(255)
-  Activo bit 
+  Activo bit [not null, default: 1]
 }
 
 Table Talles {
   IdTalle int [pk, increment]
-  Nombre varchar(20) 
+  Nombre varchar(20) [not null, unique]
   Descripcion varchar(100)
-  Activo bit 
+  Activo bit [not null, default: 1]
 }
 
-Table Colores {
-  IdColor int [pk, increment]
-  Nombre varchar(50) 
-  Activo bit 
+
+
+Table Marcas {
+  IdMarca int [pk, increment]
+  Nombre varchar(100) [not null, unique]
+  Descripcion varchar(255)
+  Activo bit [not null, default: 1]
 }
+
+
 
 Table MediosPago {
   IdMedioPago int [pk, increment]
-  Nombre varchar(100) 
-  Activo bit 
+  Nombre varchar(100) [not null, unique]
+  Activo bit [not null, default: 1]
 }
 
 Table EstadosVenta {
   IdEstadoVenta int [pk, increment]
-  Nombre varchar(50) 
+  Nombre varchar(50) [not null, unique]
   Descripcion varchar(255)
 }
 
 Table EstadosCompra {
   IdEstadoCompra int [pk, increment]
-  Nombre varchar(50) 
+  Nombre varchar(50) [not null, unique]
   Descripcion varchar(255)
 }
 
+Table TiposMovimientoStock {
+  IdTipoMovimientoStock int [pk, increment]
+  Nombre varchar(50) [not null, unique]
+  Descripcion varchar(255)
+}
+
+Table Colores {
+  IdColor int [pk, increment]
+  Nombre varchar(50) [not null, unique]
+  Activo bit [not null, default: 1]
+}
+
+
 Table Proveedores {
   IdProveedor int [pk, increment]
-  RazonSocial varchar(150) 
-  CUIT varchar(20) 
+  RazonSocial varchar(150) [not null]
+  CUIT varchar(20) [not null, unique]
   Email varchar(150)
   Telefono varchar(30)
   Direccion varchar(200)
-  Activo bit 
+  Activo bit [not null, default: 1]
 }
 
 Table Clientes {
   IdCliente int [pk, increment]
-  Apellido varchar(100) 
-  Nombre varchar(100) 
-  Documento varchar(20) 
+  Apellido varchar(100) [not null]
+  Nombre varchar(100) [not null]
+  Documento varchar(20) [not null, unique]
   Email varchar(150)
   Telefono varchar(30)
-  FechaAlta date 
-  Activo bit 
-}
-
-Table Empleados {
-  IdEmpleado int [pk, increment]
-  Apellido varchar(100) 
-  Nombre varchar(100) 
-  Documento varchar(20) 
-  Email varchar(150)
-  Telefono varchar(30)
-  FechaAlta date 
-  Activo bit 
+  FechaAlta date [not null, default: `GETDATE()`]
+  Activo bit [not null, default: 1]
 }
 
 Table Productos {
   IdProducto int [pk, increment]
-  IdCategoria int 
+  IdCategoria int [not null]
   IdMarca int
   IdTalle int
   IdColor int
-  CodigoProducto varchar(50) 
-  Nombre varchar(150) 
+  CodigoProducto varchar(50) [not null, unique]
+  Nombre varchar(150) [not null]
   Descripcion varchar(255)
-  PrecioVenta decimal(12,2) 
-  StockActual int 
-  StockMinimo int 
-  Activo bit 
+  PrecioVenta decimal(12,2) [not null]
+  StockActual int [not null, default: 0]
+  StockMinimo int [not null, default: 0]
+  Activo bit [not null, default: 1]
 }
 
 Table Compras {
   IdCompra int [pk, increment]
-  IdProveedor int 
-  IdEmpleado int 
-  IdEstadoCompra int 
-  FechaCompra datetime2 
+  IdProveedor int [not null]
+  IdEmpleado int [not null]
+  IdEstadoCompra int [not null]
+  FechaCompra datetime2 [not null, default: `SYSDATETIME()`]
   NumeroComprobante varchar(50)
-  Total decimal(12,2)
+  Total decimal(12,2) [not null, default: 0]
 }
 
 Table DetalleCompras {
   IdDetalleCompra int [pk, increment]
-  IdCompra int 
-  IdProducto int 
-  Cantidad int 
-  PrecioUnitario decimal(12,2) 
-  Subtotal decimal(12,2) 
+  IdCompra int [not null]
+  IdProducto int [not null]
+  Cantidad int [not null, note: 'CHECK (Cantidad > 0)']
+  PrecioUnitario decimal(12,2) [not null]
+  Subtotal decimal(12,2) [not null]
 }
 
 Table Ventas {
   IdVenta int [pk, increment]
-  IdCliente int 
-  IdEmpleado int 
-  IdMedioPago int 
-  IdEstadoVenta int 
-  FechaVenta datetime2 
-  Total decimal(12,2) 
+  IdCliente int [not null]
+  IdEmpleado int [not null]
+  IdMedioPago int [not null]
+  IdEstadoVenta int [not null]
+  FechaVenta datetime2 [not null, default: `SYSDATETIME()`]
+  Total decimal(12,2) [not null, default: 0]
 }
+
+Table DetalleVentas {
+  IdDetalleVenta int [pk, increment]
+  IdVenta int [not null]
+  IdProducto int [not null]
+  Cantidad int [not null, note: 'CHECK (Cantidad > 0)']
+  PrecioUnitario decimal(12,2) [not null]
+  Subtotal decimal(12,2) [not null]
+}
+
+Table MovimientosStock {
+  IdMovimientoStock int [pk, increment]
+  IdProducto int [not null]
+  IdTipoMovimientoStock int [not null]
+  IdEmpleado int [not null]
+  IdCompra int
+  IdVenta int
+  FechaMovimiento datetime2 [not null, default: `SYSDATETIME()`]
+  Cantidad int [not null]
+  Motivo varchar(255)
+}
+
+Table Empleados {
+  IdEmpleado int [pk, increment]
+  Apellido varchar(100) [not null]
+  Nombre varchar(100) [not null]
+  Documento varchar(20) [not null, unique]
+  Email varchar(150)
+  Telefono varchar(30)
+  FechaAlta date [not null, default: `GETDATE()`]
+  Activo bit [not null, default: 1]
+}
+
+
+
+
 
 /* Relaciones de las tablas */
 Ref: Categorias.IdCategoria < Productos.IdCategoria
@@ -140,3 +176,10 @@ Ref: Clientes.IdCliente < Ventas.IdCliente
 Ref: Empleados.IdEmpleado < Ventas.IdEmpleado
 Ref: MediosPago.IdMedioPago < Ventas.IdMedioPago
 Ref: EstadosVenta.IdEstadoVenta < Ventas.IdEstadoVenta
+Ref: Ventas.IdVenta < DetalleVentas.IdVenta
+Ref: Productos.IdProducto < DetalleVentas.IdProducto
+Ref: Productos.IdProducto < MovimientosStock.IdProducto
+Ref: TiposMovimientoStock.IdTipoMovimientoStock < MovimientosStock.IdTipoMovimientoStock
+Ref: Empleados.IdEmpleado < MovimientosStock.IdEmpleado
+Ref: Compras.IdCompra < MovimientosStock.IdCompra
+Ref: Ventas.IdVenta < MovimientosStock.IdVenta
