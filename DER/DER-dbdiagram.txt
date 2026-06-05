@@ -19,16 +19,12 @@ Table Talles {
   Activo bit [not null, default: 1]
 }
 
-
-
 Table Marcas {
   IdMarca int [pk, increment]
   Nombre varchar(100) [not null, unique]
   Descripcion varchar(255)
   Activo bit [not null, default: 1]
 }
-
-
 
 Table MediosPago {
   IdMedioPago int [pk, increment]
@@ -60,7 +56,6 @@ Table Colores {
   Activo bit [not null, default: 1]
 }
 
-
 Table Proveedores {
   IdProveedor int [pk, increment]
   RazonSocial varchar(150) [not null]
@@ -85,9 +80,9 @@ Table Clientes {
 Table Productos {
   IdProducto int [pk, increment]
   IdCategoria int [not null]
-  IdMarca int
-  IdTalle int
-  IdColor int
+  IdMarca int [not null]
+  IdTalle int [not null]
+  IdColor int [not null]
   CodigoProducto varchar(50) [not null, unique]
   Nombre varchar(150) [not null]
   Descripcion varchar(255)
@@ -139,7 +134,7 @@ Table MovimientosStock {
   IdMovimientoStock int [pk, increment]
   IdProducto int [not null]
   IdTipoMovimientoStock int [not null]
-  IdEmpleado int [not null]
+  IdEmpleado int
   IdCompra int
   IdVenta int
   FechaMovimiento datetime2 [not null, default: `SYSDATETIME()`]
@@ -157,10 +152,6 @@ Table Empleados {
   FechaAlta date [not null, default: `GETDATE()`]
   Activo bit [not null, default: 1]
 }
-
-
-
-
 
 /* Relaciones de las tablas */
 Ref: Categorias.IdCategoria < Productos.IdCategoria
