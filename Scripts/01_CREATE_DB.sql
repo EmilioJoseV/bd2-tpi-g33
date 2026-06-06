@@ -18,7 +18,7 @@ CREATE TABLE Categorias (
     IdCategoria int IDENTITY(1,1) PRIMARY KEY,
     Nombre varchar(100) NOT NULL,
     Descripcion varchar(255),
-    Activo bit NOT NULL
+    Activo bit NOT NULL DEFAULT 1
 );
 GO
 
@@ -26,7 +26,7 @@ CREATE TABLE Talles (
     IdTalle int IDENTITY(1,1) PRIMARY KEY,
     Nombre varchar(20) NOT NULL,
     Descripcion varchar(100),
-    Activo bit NOT NULL
+    Activo bit NOT NULL DEFAULT 1
 );
 GO
 
@@ -34,14 +34,14 @@ CREATE TABLE Marcas (
     IdMarca int IDENTITY(1,1) PRIMARY KEY,
     Nombre varchar(100) NOT NULL,
     Descripcion varchar(255),
-    Activo bit NOT NULL
+    Activo bit NOT NULL DEFAULT 1
 );
 GO
 
 CREATE TABLE MediosPago (
     IdMedioPago int IDENTITY(1,1) PRIMARY KEY,
     Nombre varchar(100) NOT NULL,
-    Activo bit NOT NULL
+    Activo bit NOT NULL DEFAULT 1
 );
 GO
 
@@ -69,7 +69,7 @@ GO
 CREATE TABLE Colores (
     IdColor int IDENTITY(1,1) PRIMARY KEY,
     Nombre varchar(50) NOT NULL,
-    Activo bit NOT NULL
+    Activo bit NOT NULL DEFAULT 1
 );
 GO
 
@@ -80,7 +80,7 @@ CREATE TABLE Proveedores (
     Email varchar(150),
     Telefono varchar(30),
     Direccion varchar(200),
-    Activo bit NOT NULL
+    Activo bit NOT NULL DEFAULT 1
 );
 GO
 
@@ -91,8 +91,8 @@ CREATE TABLE Clientes (
     Documento varchar(20) NOT NULL,
     Email varchar(150),
     Telefono varchar(30),
-    FechaAlta date NOT NULL,
-    Activo bit NOT NULL
+    FechaAlta date NOT NULL DEFAULT GETDATE(),
+    Activo bit NOT NULL DEFAULT 1
 );
 GO
 
@@ -103,8 +103,8 @@ CREATE TABLE Empleados (
     Documento varchar(20) NOT NULL,
     Email varchar(150),
     Telefono varchar(30),
-    FechaAlta date NOT NULL,
-    Activo bit NOT NULL
+    FechaAlta date NOT NULL DEFAULT GETDATE(),
+    Activo bit NOT NULL DEFAULT 1
 );
 GO
 
@@ -118,9 +118,9 @@ CREATE TABLE Productos (
     Nombre varchar(150) NOT NULL,
     Descripcion varchar(255),
     PrecioVenta decimal(12,2) NOT NULL,
-    StockActual int NOT NULL,
-    StockMinimo int NOT NULL,
-    Activo bit NOT NULL,
+    StockActual int NOT NULL DEFAULT 0,
+    StockMinimo int NOT NULL DEFAULT 0,
+    Activo bit NOT NULL DEFAULT 1,
     CONSTRAINT FK_Productos_Categorias FOREIGN KEY (IdCategoria) REFERENCES Categorias (IdCategoria),
     CONSTRAINT FK_Productos_Marcas FOREIGN KEY (IdMarca) REFERENCES Marcas (IdMarca),
     CONSTRAINT FK_Productos_Talles FOREIGN KEY (IdTalle) REFERENCES Talles (IdTalle),
@@ -133,9 +133,9 @@ CREATE TABLE Compras (
     IdProveedor int NOT NULL,
     IdEmpleado int NOT NULL,
     IdEstadoCompra int NOT NULL,
-    FechaCompra datetime2 NOT NULL,
+    FechaCompra datetime2 NOT NULL DEFAULT SYSDATETIME(),
     NumeroComprobante varchar(50),
-    Total decimal(12,2) NOT NULL,
+    Total decimal(12,2) NOT NULL DEFAULT 0,
     CONSTRAINT FK_Compras_Proveedores FOREIGN KEY (IdProveedor) REFERENCES Proveedores (IdProveedor),
     CONSTRAINT FK_Compras_Empleados FOREIGN KEY (IdEmpleado) REFERENCES Empleados (IdEmpleado),
     CONSTRAINT FK_Compras_EstadosCompra FOREIGN KEY (IdEstadoCompra) REFERENCES EstadosCompra (IdEstadoCompra)
@@ -148,8 +148,8 @@ CREATE TABLE Ventas (
     IdEmpleado int NOT NULL,
     IdMedioPago int NOT NULL,
     IdEstadoVenta int NOT NULL,
-    FechaVenta datetime2 NOT NULL,
-    Total decimal(12,2) NOT NULL,
+    FechaVenta datetime2 NOT NULL DEFAULT SYSDATETIME(),
+    Total decimal(12,2) NOT NULL DEFAULT 0,
     CONSTRAINT FK_Ventas_Clientes FOREIGN KEY (IdCliente) REFERENCES Clientes (IdCliente),
     CONSTRAINT FK_Ventas_Empleados FOREIGN KEY (IdEmpleado) REFERENCES Empleados (IdEmpleado),
     CONSTRAINT FK_Ventas_MediosPago FOREIGN KEY (IdMedioPago) REFERENCES MediosPago (IdMedioPago),
@@ -188,7 +188,7 @@ CREATE TABLE MovimientosStock (
     IdEmpleado int,
     IdCompra int,
     IdVenta int,
-    FechaMovimiento datetime2 NOT NULL,
+    FechaMovimiento datetime2 NOT NULL DEFAULT SYSDATETIME(),
     Cantidad int NOT NULL,
     Motivo varchar(255),
     CONSTRAINT FK_MovimientosStock_Productos FOREIGN KEY (IdProducto) REFERENCES Productos (IdProducto),
