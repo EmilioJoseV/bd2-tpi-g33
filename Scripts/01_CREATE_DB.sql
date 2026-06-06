@@ -16,7 +16,7 @@ GO
 
 CREATE TABLE Categorias (
     IdCategoria int IDENTITY(1,1) PRIMARY KEY,
-    Nombre varchar(100) NOT NULL,
+    Nombre varchar(100) NOT NULL UNIQUE,
     Descripcion varchar(255),
     Activo bit NOT NULL DEFAULT 1
 );
@@ -24,7 +24,7 @@ GO
 
 CREATE TABLE Talles (
     IdTalle int IDENTITY(1,1) PRIMARY KEY,
-    Nombre varchar(20) NOT NULL,
+    Nombre varchar(20) NOT NULL UNIQUE,
     Descripcion varchar(100),
     Activo bit NOT NULL DEFAULT 1
 );
@@ -32,7 +32,7 @@ GO
 
 CREATE TABLE Marcas (
     IdMarca int IDENTITY(1,1) PRIMARY KEY,
-    Nombre varchar(100) NOT NULL,
+    Nombre varchar(100) NOT NULL UNIQUE,
     Descripcion varchar(255),
     Activo bit NOT NULL DEFAULT 1
 );
@@ -40,35 +40,35 @@ GO
 
 CREATE TABLE MediosPago (
     IdMedioPago int IDENTITY(1,1) PRIMARY KEY,
-    Nombre varchar(100) NOT NULL,
+    Nombre varchar(100) NOT NULL UNIQUE,
     Activo bit NOT NULL DEFAULT 1
 );
 GO
 
 CREATE TABLE EstadosVenta (
     IdEstadoVenta int IDENTITY(1,1) PRIMARY KEY,
-    Nombre varchar(50) NOT NULL,
+    Nombre varchar(50) NOT NULL UNIQUE,
     Descripcion varchar(255)
 );
 GO
 
 CREATE TABLE EstadosCompra (
     IdEstadoCompra int IDENTITY(1,1) PRIMARY KEY,
-    Nombre varchar(50) NOT NULL,
+    Nombre varchar(50) NOT NULL UNIQUE,
     Descripcion varchar(255)
 );
 GO
 
 CREATE TABLE TiposMovimientoStock (
     IdTipoMovimientoStock int IDENTITY(1,1) PRIMARY KEY,
-    Nombre varchar(50) NOT NULL,
+    Nombre varchar(50) NOT NULL UNIQUE,
     Descripcion varchar(255)
 );
 GO
 
 CREATE TABLE Colores (
     IdColor int IDENTITY(1,1) PRIMARY KEY,
-    Nombre varchar(50) NOT NULL,
+    Nombre varchar(50) NOT NULL UNIQUE,
     Activo bit NOT NULL DEFAULT 1
 );
 GO
@@ -76,7 +76,7 @@ GO
 CREATE TABLE Proveedores (
     IdProveedor int IDENTITY(1,1) PRIMARY KEY,
     RazonSocial varchar(150) NOT NULL,
-    CUIT varchar(20) NOT NULL,
+    CUIT varchar(20) NOT NULL UNIQUE,
     Email varchar(150),
     Telefono varchar(30),
     Direccion varchar(200),
@@ -88,7 +88,7 @@ CREATE TABLE Clientes (
     IdCliente int IDENTITY(1,1) PRIMARY KEY,
     Apellido varchar(100) NOT NULL,
     Nombre varchar(100) NOT NULL,
-    Documento varchar(20) NOT NULL,
+    Documento varchar(20) NOT NULL UNIQUE,
     Email varchar(150),
     Telefono varchar(30),
     FechaAlta date NOT NULL DEFAULT GETDATE(),
@@ -100,7 +100,7 @@ CREATE TABLE Empleados (
     IdEmpleado int IDENTITY(1,1) PRIMARY KEY,
     Apellido varchar(100) NOT NULL,
     Nombre varchar(100) NOT NULL,
-    Documento varchar(20) NOT NULL,
+    Documento varchar(20) NOT NULL UNIQUE,
     Email varchar(150),
     Telefono varchar(30),
     FechaAlta date NOT NULL DEFAULT GETDATE(),
@@ -114,7 +114,7 @@ CREATE TABLE Productos (
     IdMarca int NOT NULL,
     IdTalle int NOT NULL,
     IdColor int NOT NULL,
-    CodigoProducto varchar(50) NOT NULL,
+    CodigoProducto varchar(50) NOT NULL UNIQUE,
     Nombre varchar(150) NOT NULL,
     Descripcion varchar(255),
     PrecioVenta decimal(12,2) NOT NULL,
@@ -161,7 +161,7 @@ CREATE TABLE DetalleCompras (
     IdDetalleCompra int IDENTITY(1,1) PRIMARY KEY,
     IdCompra int NOT NULL,
     IdProducto int NOT NULL,
-    Cantidad int NOT NULL,
+    Cantidad int NOT NULL CHECK (Cantidad > 0),
     PrecioUnitario decimal(12,2) NOT NULL,
     Subtotal decimal(12,2) NOT NULL,
     CONSTRAINT FK_DetalleCompras_Compras FOREIGN KEY (IdCompra) REFERENCES Compras (IdCompra),
@@ -173,7 +173,7 @@ CREATE TABLE DetalleVentas (
     IdDetalleVenta int IDENTITY(1,1) PRIMARY KEY,
     IdVenta int NOT NULL,
     IdProducto int NOT NULL,
-    Cantidad int NOT NULL,
+    Cantidad int NOT NULL CHECK (Cantidad > 0),
     PrecioUnitario decimal(12,2) NOT NULL,
     Subtotal decimal(12,2) NOT NULL,
     CONSTRAINT FK_DetalleVentas_Ventas FOREIGN KEY (IdVenta) REFERENCES Ventas (IdVenta),
