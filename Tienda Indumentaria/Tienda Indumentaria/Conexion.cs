@@ -28,7 +28,7 @@ namespace TiendaIndumentaria.App
 
         public static DataTable EjecutarProcedimiento(
             string nombreSp,
-            params (string Nombre, object Valor)[] parametros)
+            params (string Nombre, object? Valor)[] parametros)
         {
             var tabla = new DataTable();
             using (var conexion = new SqlConnection(CadenaConexion))
@@ -36,7 +36,7 @@ namespace TiendaIndumentaria.App
             {
                 comando.CommandType = CommandType.StoredProcedure;
                 foreach (var (nombre, valor) in parametros)
-                    comando.Parameters.AddWithValue(nombre, valor);
+                    comando.Parameters.AddWithValue(nombre, valor ?? DBNull.Value);
 
                 using (var adaptador = new SqlDataAdapter(comando))
                     adaptador.Fill(tabla);

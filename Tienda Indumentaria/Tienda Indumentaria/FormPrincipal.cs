@@ -5,139 +5,440 @@ using System.Windows.Forms;
 
 namespace TiendaIndumentaria.App
 {
-    /// <summary>
-    /// Pantalla principal. Tiene un combo para elegir qué consultar,
-    /// un botón para ejecutar, y una grilla donde se muestran los datos.
-    ///
-    /// Para agregar una vista/consulta nueva: sumar una entrada en el combo
-    /// (método CargarOpciones) y manejar su caso en el botón (BtnEjecutar_Click).
-    /// La idea es que toda la lógica de datos viva en consultas/objetos de la base,
-    /// y la app solo los invoque.
-    /// </summary>
     public class FormPrincipal : Form
     {
         private ComboBox _comboConsultas = null!;
+        private ComboBox _comboVistas = null!;
         private Button _botonEjecutar = null!;
         private DataGridView _grilla = null!;
         private Label _etiquetaEstado = null!;
+        private GroupBox _grupoEntidad = null!;
+
+        private Label[] _etiquetasCampos = null!;
+        private TextBox[] _textosCampos = null!;
+        private string[] _columnasCampos = Array.Empty<string>();
+
+        private Button _botonRegistrar = null!;
+        private Button _botonActualizar = null!;
+        private Button _botonDesactivar = null!;
+        private Button _botonListar = null!;
+        private Button _botonLimpiar = null!;
+
+        private OpcionConsulta? _opcionActual;
+        private string? _idRegistroSeleccionado;
 
         public FormPrincipal()
         {
             ConstruirInterfaz();
             CargarOpciones();
+            EjecutarConsultaSeleccionada();
         }
 
         private void ConstruirInterfaz()
         {
             Text = "Tienda de Indumentaria - Demo BD2";
-            Width = 900;
-            Height = 600;
+            Width = 1120;
+            Height = 720;
+            MinimumSize = new Size(1000, 640);
             StartPosition = FormStartPosition.CenterScreen;
 
-            var etiquetaTitulo = new Label
+            var contenedor = new TableLayoutPanel
             {
-                Text = "Seleccione una consulta:",
-                Left = 15,
-                Top = 18,
-                Width = 160,
-                AutoSize = true
+                Dock = DockStyle.Fill,
+                Padding = new Padding(14),
+                ColumnCount = 1,
+                RowCount = 4
             };
+            contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
+            contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 205));
+            contenedor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+
+            var panelConsulta = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 4,
+                RowCount = 2,
+                Margin = new Padding(0, 0, 0, 8)
+            };
+            panelConsulta.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 78));
+            panelConsulta.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 430));
+            panelConsulta.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112));
+            panelConsulta.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            panelConsulta.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            panelConsulta.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
 
             _comboConsultas = new ComboBox
             {
-                Left = 180,
-                Top = 14,
-                Width = 400,
-                Height = 28,
-                DropDownStyle = ComboBoxStyle.DropDownList
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Margin = new Padding(0, 0, 12, 0)
+            };
+            _comboConsultas.SelectedIndexChanged += ComboConsultas_SelectedIndexChanged;
+
+            _comboVistas = new ComboBox
+            {
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Enabled = false,
+                Margin = new Padding(0, 0, 12, 0)
             };
 
             _botonEjecutar = new Button
             {
                 Text = "Ejecutar",
-                Left = 600,
-                Top = 13,
-                Width = 100,
+                Dock = DockStyle.Top,
                 Height = 30,
+                Margin = new Padding(0),
                 UseVisualStyleBackColor = true
             };
-            _botonEjecutar.Click += BtnEjecutar_Click;
+            _botonEjecutar.Click += (_, _) => EjecutarConsultaSeleccionada();
+
+            panelConsulta.Controls.Add(CrearEtiqueta("Tabla:"), 0, 0);
+            panelConsulta.Controls.Add(_comboConsultas, 1, 0);
+            panelConsulta.Controls.Add(_botonEjecutar, 2, 0);
+            panelConsulta.SetRowSpan(_botonEjecutar, 2);
+            panelConsulta.Controls.Add(CrearEtiqueta("Vista:"), 0, 1);
+            panelConsulta.Controls.Add(_comboVistas, 1, 1);
+
+            _grupoEntidad = new GroupBox
+            {
+                Text = "Entidad",
+                Dock = DockStyle.Fill,
+                Padding = new Padding(12, 10, 12, 12),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+
+            CrearCamposEntidad();
+            CrearBotonesEntidad();
 
             _grilla = new DataGridView
             {
-                Left = 15,
-                Top = 55,
-                Width = 855,
-                Height = 460,
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom
-                       | AnchorStyles.Left | AnchorStyles.Right,
+                Dock = DockStyle.Fill,
                 ReadOnly = true,
                 AllowUserToAddRows = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                Margin = new Padding(0)
             };
+            _grilla.CellClick += Grilla_CellClick;
+            _grilla.MouseDown += Grilla_MouseDown;
 
             _etiquetaEstado = new Label
             {
-                Left = 15,
-                Top = 525,
-                Width = 855,
-                Height = 20,
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = Color.DimGray
             };
 
-            Controls.Add(etiquetaTitulo);
-            Controls.Add(_comboConsultas);
-            Controls.Add(_botonEjecutar);
-            Controls.Add(_grilla);
-            Controls.Add(_etiquetaEstado);
+            contenedor.Controls.Add(panelConsulta, 0, 0);
+            contenedor.Controls.Add(_grupoEntidad, 0, 1);
+            contenedor.Controls.Add(_grilla, 0, 2);
+            contenedor.Controls.Add(_etiquetaEstado, 0, 3);
+            Controls.Add(contenedor);
         }
 
-        /// <summary>
-        /// Las opciones del combo. Cada item tiene un texto visible y la
-        /// consulta SQL (o nombre de SP) que se ejecuta.
-        /// Cuando tengan sus vistas reales, reemplazar estos ejemplos.
-        /// </summary>
+        private void CrearCamposEntidad()
+        {
+            int[] lefts = { 22, 180, 548, 22, 360, 588 };
+            int[] tops = { 27, 27, 27, 83, 83, 83 };
+            int[] textTops = { 48, 48, 48, 104, 104, 104 };
+            int[] widths = { 120, 330, 190, 300, 190, 420 };
+
+            _etiquetasCampos = new Label[6];
+            _textosCampos = new TextBox[6];
+
+            for (int i = 0; i < 6; i++)
+            {
+                _etiquetasCampos[i] = CrearEtiquetaCampo(string.Empty, lefts[i], tops[i], widths[i]);
+                _textosCampos[i] = CrearTexto(lefts[i], textTops[i], widths[i]);
+                _grupoEntidad.Controls.Add(_etiquetasCampos[i]);
+                _grupoEntidad.Controls.Add(_textosCampos[i]);
+            }
+
+        }
+
+        private void CrearBotonesEntidad()
+        {
+            _botonRegistrar = CrearBoton("Registrar", 22, 148, 110);
+            _botonRegistrar.Click += BtnRegistrarProveedor_Click;
+
+            _botonActualizar = CrearBoton("Actualizar contacto", 144, 148, 150);
+            _botonActualizar.Click += BtnActualizarContacto_Click;
+
+            _botonDesactivar = CrearBoton("Desactivar", 306, 148, 110);
+            _botonDesactivar.Click += BtnDesactivarProveedor_Click;
+
+            _botonListar = CrearBoton("Listar", 428, 148, 90);
+            _botonListar.Click += (_, _) => EjecutarConsultaSeleccionada();
+
+            _botonLimpiar = CrearBoton("Limpiar", 530, 148, 90);
+            _botonLimpiar.Click += (_, _) => LimpiarCampos();
+
+            _grupoEntidad.Controls.Add(_botonRegistrar);
+            _grupoEntidad.Controls.Add(_botonActualizar);
+            _grupoEntidad.Controls.Add(_botonDesactivar);
+            _grupoEntidad.Controls.Add(_botonListar);
+            _grupoEntidad.Controls.Add(_botonLimpiar);
+        }
+
+        private static Label CrearEtiqueta(string texto)
+        {
+            return new Label
+            {
+                Text = texto,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false,
+                Margin = new Padding(0, 0, 8, 0)
+            };
+        }
+
+        private static Label CrearEtiquetaCampo(string texto, int left, int top, int width)
+        {
+            return new Label
+            {
+                Text = texto,
+                Left = left,
+                Top = top,
+                Width = width,
+                Height = 18,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+        }
+
+        private static TextBox CrearTexto(int left, int top, int width)
+        {
+            return new TextBox
+            {
+                Left = left,
+                Top = top,
+                Width = width,
+                Height = 24,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.White
+            };
+        }
+
+        private static Button CrearBoton(string texto, int left, int top, int width)
+        {
+            return new Button
+            {
+                Text = texto,
+                Left = left,
+                Top = top,
+                Width = width,
+                Height = 30,
+                UseVisualStyleBackColor = true
+            };
+        }
+
         private void CargarOpciones()
         {
             _comboConsultas.Items.Add(new OpcionConsulta(
-                "Productos (tabla completa)",
-                "SELECT * FROM Productos"));
+                "Proveedores",
+                "SELECT IdProveedor, RazonSocial, CUIT, Email, Telefono, Direccion, Activo " +
+                "FROM Proveedores ORDER BY RazonSocial",
+                "Proveedores",
+                "IdProveedor",
+                true,
+                ("Razon social", "RazonSocial"),
+                ("CUIT", "CUIT"),
+                ("Email", "Email"),
+                ("Telefono", "Telefono"),
+                ("Direccion", "Direccion"),
+                ("", "")));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Clientes activos",
-                "SELECT IdCliente, Apellido, Nombre, Documento " +
-                "FROM Clientes WHERE Activo = 1"));
+                "SELECT IdCliente, Apellido, Nombre, Documento, Email, Telefono, Activo " +
+                "FROM Clientes WHERE Activo = 1 ORDER BY Apellido, Nombre",
+                "Clientes",
+                "IdCliente",
+                false,
+                ("Apellido", "Apellido"),
+                ("Nombre", "Nombre"),
+                ("Documento", "Documento"),
+                ("Email", "Email"),
+                ("Telefono", "Telefono"),
+                ("Activo", "Activo")));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
-                "Últimas ventas",
-                "SELECT TOP (50) IdVenta, IdCliente, FechaVenta, Total " +
-                "FROM Ventas ORDER BY FechaVenta DESC"));
+                "Productos (tabla completa)",
+                "SELECT * FROM Productos",
+                "Productos",
+                "IdProducto",
+                false,
+                ("Codigo", "CodigoProducto"),
+                ("Nombre", "Nombre"),
+                ("Precio venta", "PrecioVenta"),
+                ("Stock actual", "StockActual"),
+                ("Stock minimo", "StockMinimo"),
+                ("Activo", "Activo")));
 
-            // Ejemplo de cómo quedaría una vista propia una vez creada:
-            // _comboConsultas.Items.Add(new OpcionConsulta(
-            //     "Reporte: stock bajo mínimo",
-            //     "SELECT * FROM VW_ProductosBajoStock"));
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Ultimas ventas",
+                "SELECT TOP (50) IdVenta, IdCliente, FechaVenta, Total " +
+                "FROM Ventas ORDER BY FechaVenta DESC",
+                "Ventas",
+                "IdVenta",
+                false,
+                ("Id cliente", "IdCliente"),
+                ("Fecha", "FechaVenta"),
+                ("Total", "Total"),
+                ("", ""),
+                ("", "")));
 
             if (_comboConsultas.Items.Count > 0)
                 _comboConsultas.SelectedIndex = 0;
         }
 
-        private void BtnEjecutar_Click(object? sender, EventArgs e)
+        private void ComboConsultas_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (_comboConsultas.SelectedItem is not OpcionConsulta opcion)
                 return;
 
-            try
+            _opcionActual = opcion;
+            ConfigurarFormulario(opcion);
+            CargarVistasParaTabla(opcion);
+            LimpiarCampos();
+        }
+
+        private void CargarVistasParaTabla(OpcionConsulta opcion)
+        {
+            _comboVistas.Items.Clear();
+            _comboVistas.Enabled = false;
+            _comboVistas.Items.Add($"Sin vistas de {opcion.Entidad}");
+            _comboVistas.SelectedIndex = 0;
+        }
+
+        private void ConfigurarFormulario(OpcionConsulta opcion)
+        {
+            _idRegistroSeleccionado = null;
+            ActualizarTituloEntidad();
+            _columnasCampos = new string[_textosCampos.Length];
+
+            for (int i = 0; i < _textosCampos.Length; i++)
+            {
+                CampoFormulario campo = opcion.Campos[i];
+                bool visible = !string.IsNullOrWhiteSpace(campo.Etiqueta);
+
+                _etiquetasCampos[i].Text = campo.Etiqueta;
+                _etiquetasCampos[i].Visible = visible;
+                _textosCampos[i].Visible = visible;
+                _textosCampos[i].ReadOnly = false;
+                _columnasCampos[i] = campo.Columna;
+            }
+
+            _botonRegistrar.Enabled = opcion.PermiteAccionesProveedor;
+            _botonActualizar.Enabled = opcion.PermiteAccionesProveedor;
+            _botonDesactivar.Enabled = opcion.PermiteAccionesProveedor;
+            _botonActualizar.Text = opcion.PermiteAccionesProveedor ? "Actualizar contacto" : "Actualizar";
+        }
+
+        private void EjecutarConsultaSeleccionada()
+        {
+            if (_comboConsultas.SelectedItem is not OpcionConsulta opcion)
+                return;
+
+            EjecutarOperacion(() =>
             {
                 DataTable datos = Conexion.EjecutarConsulta(opcion.Sql);
-                _grilla.DataSource = datos;
-                _etiquetaEstado.Text = $"{datos.Rows.Count} fila(s) devuelta(s).";
+                MostrarDatos(datos, $"{datos.Rows.Count} fila(s) devuelta(s).");
+            });
+        }
+
+        private void BtnRegistrarProveedor_Click(object? sender, EventArgs e)
+        {
+            if (!EsFormularioProveedor())
+                return;
+
+            if (!ValidarObligatorio(_textosCampos[0], "La razon social es obligatoria."))
+                return;
+
+            if (!ValidarObligatorio(_textosCampos[1], "El CUIT es obligatorio."))
+                return;
+
+            EjecutarOperacion(() =>
+            {
+                DataTable datos = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Proveedor_Registrar",
+                    ("@RazonSocial", _textosCampos[0].Text.Trim()),
+                    ("@CUIT", _textosCampos[1].Text.Trim()),
+                    ("@Email", ValorOpcional(_textosCampos[2].Text)),
+                    ("@Telefono", ValorOpcional(_textosCampos[3].Text)),
+                    ("@Direccion", ValorOpcional(_textosCampos[4].Text)));
+
+                MostrarDatos(datos, "Proveedor registrado correctamente.");
+                CargarCamposDesdePrimeraFila(datos);
+            });
+        }
+
+        private void BtnActualizarContacto_Click(object? sender, EventArgs e)
+        {
+            if (!EsFormularioProveedor() || !TryObtenerIdProveedor(out int idProveedor))
+                return;
+
+            EjecutarOperacion(() =>
+            {
+                DataTable datos = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Proveedor_ActualizarContacto",
+                    ("@IdProveedor", idProveedor),
+                    ("@Email", ValorOpcional(_textosCampos[2].Text)),
+                    ("@Telefono", ValorOpcional(_textosCampos[3].Text)),
+                    ("@Direccion", ValorOpcional(_textosCampos[4].Text)));
+
+                MostrarDatos(datos, "Contacto actualizado correctamente.");
+                CargarCamposDesdePrimeraFila(datos);
+            });
+        }
+
+        private void BtnDesactivarProveedor_Click(object? sender, EventArgs e)
+        {
+            if (!EsFormularioProveedor() || !TryObtenerIdProveedor(out int idProveedor))
+                return;
+
+            var confirmacion = MessageBox.Show(
+                "Se marcara el proveedor como inactivo. Desea continuar?",
+                "Confirmar baja logica",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirmacion != DialogResult.Yes)
+                return;
+
+            EjecutarOperacion(() =>
+            {
+                DataTable datos = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Proveedor_Desactivar",
+                    ("@IdProveedor", idProveedor));
+
+                MostrarDatos(datos, "Proveedor desactivado correctamente.");
+                CargarCamposDesdePrimeraFila(datos);
+            });
+        }
+
+        private bool EsFormularioProveedor()
+        {
+            return _opcionActual?.PermiteAccionesProveedor == true;
+        }
+
+        private void MostrarDatos(DataTable datos, string mensaje)
+        {
+            _grilla.DataSource = datos;
+            _etiquetaEstado.Text = mensaje;
+        }
+
+        private void EjecutarOperacion(Action operacion)
+        {
+            try
+            {
+                operacion();
             }
             catch (Exception ex)
             {
-                _etiquetaEstado.Text = "Error al ejecutar la consulta.";
+                _etiquetaEstado.Text = "Error al ejecutar la operacion.";
                 MessageBox.Show(
                     ex.Message,
                     "Error de base de datos",
@@ -146,22 +447,179 @@ namespace TiendaIndumentaria.App
             }
         }
 
-        /// <summary>
-        /// Representa una opción del combo: lo que ve el usuario + el SQL a correr.
-        /// </summary>
+        private bool ValidarObligatorio(TextBox texto, string mensaje)
+        {
+            if (!string.IsNullOrWhiteSpace(texto.Text))
+                return true;
+
+            MessageBox.Show(mensaje, "Dato requerido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            texto.Focus();
+            return false;
+        }
+
+        private bool TryObtenerIdProveedor(out int idProveedor)
+        {
+            if (int.TryParse(_idRegistroSeleccionado, out idProveedor))
+                return true;
+
+            MessageBox.Show(
+                "Seleccione un proveedor de la grilla antes de continuar.",
+                "Proveedor requerido",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            return false;
+        }
+
+        private static object? ValorOpcional(string texto)
+        {
+            return string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+        }
+
+        private void Grilla_CellClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0)
+                return;
+
+            CargarCamposDesdeFila(_grilla.Rows[e.RowIndex]);
+        }
+
+        private void Grilla_MouseDown(object? sender, MouseEventArgs e)
+        {
+            DataGridView.HitTestInfo hit = _grilla.HitTest(e.X, e.Y);
+            if (hit.Type == DataGridViewHitTestType.Cell && hit.RowIndex >= 0)
+                return;
+
+            _grilla.ClearSelection();
+            LimpiarCampos();
+        }
+
+        private void CargarCamposDesdePrimeraFila(DataTable datos)
+        {
+            if (datos.Rows.Count == 0)
+                return;
+
+            DataRow fila = datos.Rows[0];
+            CargarIdSeleccionado(fila);
+            for (int i = 0; i < _textosCampos.Length; i++)
+                _textosCampos[i].Text = Texto(fila, _columnasCampos[i]);
+        }
+
+        private void CargarCamposDesdeFila(DataGridViewRow fila)
+        {
+            CargarIdSeleccionado(fila);
+            for (int i = 0; i < _textosCampos.Length; i++)
+                _textosCampos[i].Text = Texto(fila, _columnasCampos[i]);
+        }
+
+        private void CargarIdSeleccionado(DataRow fila)
+        {
+            _idRegistroSeleccionado = _opcionActual == null
+                ? null
+                : Texto(fila, _opcionActual.ColumnaId);
+            ActualizarTituloEntidad();
+        }
+
+        private void CargarIdSeleccionado(DataGridViewRow fila)
+        {
+            _idRegistroSeleccionado = _opcionActual == null
+                ? null
+                : Texto(fila, _opcionActual.ColumnaId);
+            ActualizarTituloEntidad();
+        }
+
+        private void ActualizarTituloEntidad()
+        {
+            if (_opcionActual == null)
+            {
+                _grupoEntidad.Text = "Entidad";
+                return;
+            }
+
+            _grupoEntidad.Text = string.IsNullOrWhiteSpace(_idRegistroSeleccionado)
+                ? _opcionActual.Entidad
+                : $"{_opcionActual.Entidad} - seleccionado #{_idRegistroSeleccionado}";
+        }
+
+        private static string Texto(DataRow fila, string columna)
+        {
+            if (string.IsNullOrWhiteSpace(columna) ||
+                !fila.Table.Columns.Contains(columna) ||
+                fila[columna] == DBNull.Value)
+                return string.Empty;
+
+            return Convert.ToString(fila[columna]) ?? string.Empty;
+        }
+
+        private static string Texto(DataGridViewRow fila, string columna)
+        {
+            if (string.IsNullOrWhiteSpace(columna) ||
+                fila.DataGridView == null ||
+                !fila.DataGridView.Columns.Contains(columna))
+                return string.Empty;
+
+            object? valor = fila.Cells[columna].Value;
+            if (valor == null || valor == DBNull.Value)
+                return string.Empty;
+
+            return Convert.ToString(valor) ?? string.Empty;
+        }
+
+        private void LimpiarCampos()
+        {
+            foreach (TextBox texto in _textosCampos)
+                texto.Clear();
+
+            _idRegistroSeleccionado = null;
+            ActualizarTituloEntidad();
+
+            if (_textosCampos.Length > 0 && _textosCampos[0].Visible)
+                _textosCampos[0].Focus();
+        }
+
         private sealed class OpcionConsulta
         {
             public string Texto { get; }
             public string Sql { get; }
+            public string Entidad { get; }
+            public string ColumnaId { get; }
+            public bool PermiteAccionesProveedor { get; }
+            public CampoFormulario[] Campos { get; }
 
-            public OpcionConsulta(string texto, string sql)
+            public OpcionConsulta(
+                string texto,
+                string sql,
+                string entidad,
+                string columnaId,
+                bool permiteAccionesProveedor,
+                params (string Etiqueta, string Columna)[] campos)
             {
                 Texto = texto;
                 Sql = sql;
+                Entidad = entidad;
+                ColumnaId = columnaId;
+                PermiteAccionesProveedor = permiteAccionesProveedor;
+                Campos = new CampoFormulario[6];
+
+                for (int i = 0; i < Campos.Length; i++)
+                {
+                    var campo = i < campos.Length ? campos[i] : (string.Empty, string.Empty);
+                    Campos[i] = new CampoFormulario(campo.Item1, campo.Item2);
+                }
             }
 
-            // El combo muestra esto como texto del item.
             public override string ToString() => Texto;
+        }
+
+        private sealed class CampoFormulario
+        {
+            public string Etiqueta { get; }
+            public string Columna { get; }
+
+            public CampoFormulario(string etiqueta, string columna)
+            {
+                Etiqueta = etiqueta;
+                Columna = columna;
+            }
         }
     }
 }
