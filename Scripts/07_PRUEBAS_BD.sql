@@ -2,6 +2,25 @@ USE BD2_TPI_TIENDA_INDUMENTARIA;
 GO
 
 ------------------------------------------------------------------------------------------------
+-- #1 - Clasificar los productos por categorías
+
+-- Prueba de clasificacion general de productos por categoria
+SELECT p.IdProducto, p.CodigoProducto, p.Nombre, c.Nombre AS Categoria
+FROM Productos p
+INNER JOIN Categorias c ON p.IdCategoria = c.IdCategoria
+ORDER BY c.Nombre, p.Nombre;
+GO
+
+-- Prueba de filtro de productos por una categoria puntual
+SELECT p.IdProducto, p.CodigoProducto, p.Nombre, c.Nombre AS Categoria
+FROM Productos p
+INNER JOIN Categorias c ON p.IdCategoria = c.IdCategoria
+WHERE c.Nombre = 'Remeras'
+ORDER BY p.Nombre;
+------------------------------------------------------------------------------------------------
+GO
+
+------------------------------------------------------------------------------------------------
 -- #3 - Registrar proveedores y mantener sus datos de contacto
 
 -- Prueba de registro de proveedor nuevo.
