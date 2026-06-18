@@ -21,11 +21,13 @@ namespace TiendaIndumentaria.App
         private Button _botonRegistrar = null!;
         private Button _botonActualizar = null!;
         private Button _botonDesactivar = null!;
+        private Button _botonActivar = null!;
         private Button _botonListar = null!;
         private Button _botonLimpiar = null!;
 
         private OpcionConsulta? _opcionActual;
         private string? _idRegistroSeleccionado;
+        private bool? _activoRegistroSeleccionado;
 
         public FormPrincipal()
         {
@@ -162,23 +164,27 @@ namespace TiendaIndumentaria.App
         private void CrearBotonesEntidad()
         {
             _botonRegistrar = CrearBoton("Registrar", 22, 148, 110);
-            _botonRegistrar.Click += BtnRegistrarProveedor_Click;
+            _botonRegistrar.Click += BtnRegistrar_Click;
 
             _botonActualizar = CrearBoton("Actualizar contacto", 144, 148, 150);
-            _botonActualizar.Click += BtnActualizarContacto_Click;
+            _botonActualizar.Click += BtnActualizar_Click;
 
             _botonDesactivar = CrearBoton("Desactivar", 306, 148, 110);
-            _botonDesactivar.Click += BtnDesactivarProveedor_Click;
+            _botonDesactivar.Click += BtnDesactivar_Click;
 
-            _botonListar = CrearBoton("Listar", 428, 148, 90);
+            _botonActivar = CrearBoton("Activar", 428, 148, 90);
+            _botonActivar.Click += BtnActivar_Click;
+
+            _botonListar = CrearBoton("Listar", 530, 148, 90);
             _botonListar.Click += (_, _) => EjecutarConsultaSeleccionada();
 
-            _botonLimpiar = CrearBoton("Limpiar", 530, 148, 90);
+            _botonLimpiar = CrearBoton("Limpiar", 632, 148, 90);
             _botonLimpiar.Click += (_, _) => LimpiarCampos();
 
             _grupoEntidad.Controls.Add(_botonRegistrar);
             _grupoEntidad.Controls.Add(_botonActualizar);
             _grupoEntidad.Controls.Add(_botonDesactivar);
+            _grupoEntidad.Controls.Add(_botonActivar);
             _grupoEntidad.Controls.Add(_botonListar);
             _grupoEntidad.Controls.Add(_botonLimpiar);
         }
@@ -251,6 +257,20 @@ namespace TiendaIndumentaria.App
                 ("", "")));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
+                "Empleados",
+                "SELECT IdEmpleado, Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo " +
+                "FROM Empleados ORDER BY Apellido, Nombre",
+                "Empleados",
+                "IdEmpleado",
+                true,
+                ("Apellido", "Apellido"),
+                ("Nombre", "Nombre"),
+                ("Documento", "Documento"),
+                ("Email", "Email"),
+                ("Telefono", "Telefono"),
+                ("", "")));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
                 "Clientes activos",
                 "SELECT IdCliente, Apellido, Nombre, Documento, Email, Telefono, Activo " +
                 "FROM Clientes WHERE Activo = 1 ORDER BY Apellido, Nombre",
@@ -262,7 +282,7 @@ namespace TiendaIndumentaria.App
                 ("Documento", "Documento"),
                 ("Email", "Email"),
                 ("Telefono", "Telefono"),
-                ("Activo", "Activo")));
+                ("", "")));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Productos (tabla completa)",
@@ -275,7 +295,7 @@ namespace TiendaIndumentaria.App
                 ("Precio venta", "PrecioVenta"),
                 ("Stock actual", "StockActual"),
                 ("Stock minimo", "StockMinimo"),
-                ("Activo", "Activo")));
+                ("", "")));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Ultimas ventas",
@@ -331,10 +351,11 @@ namespace TiendaIndumentaria.App
                 _columnasCampos[i] = campo.Columna;
             }
 
-            _botonRegistrar.Enabled = opcion.PermiteAccionesProveedor;
-            _botonActualizar.Enabled = opcion.PermiteAccionesProveedor;
-            _botonDesactivar.Enabled = opcion.PermiteAccionesProveedor;
-            _botonActualizar.Text = opcion.PermiteAccionesProveedor ? "Actualizar contacto" : "Actualizar";
+            _botonRegistrar.Enabled = opcion.PermiteAcciones;
+            _botonActualizar.Enabled = opcion.PermiteAcciones;
+            _botonDesactivar.Enabled = opcion.PermiteAcciones;
+            _botonActivar.Enabled = opcion.PermiteAcciones;
+            _botonActualizar.Text = EsFormularioProveedor() ? "Actualizar contacto" : "Actualizar";
         }
 
         private void EjecutarConsultaSeleccionada()
@@ -349,11 +370,20 @@ namespace TiendaIndumentaria.App
             });
         }
 
-        private void BtnRegistrarProveedor_Click(object? sender, EventArgs e)
+        private void BtnRegistrar_Click(object? sender, EventArgs e)
         {
-            if (!EsFormularioProveedor())
+            if (EsFormularioProveedor())
+            {
+                RegistrarProveedor();
                 return;
+            }
 
+            if (EsFormularioEmpleado())
+                RegistrarEmpleado();
+        }
+
+        private void RegistrarProveedor()
+        {
             if (!ValidarObligatorio(_textosCampos[0], "La razon social es obligatoria."))
                 return;
 
@@ -375,9 +405,47 @@ namespace TiendaIndumentaria.App
             });
         }
 
-        private void BtnActualizarContacto_Click(object? sender, EventArgs e)
+        private void RegistrarEmpleado()
         {
-            if (!EsFormularioProveedor() || !TryObtenerIdProveedor(out int idProveedor))
+            if (!ValidarObligatorio(_textosCampos[0], "El apellido es obligatorio."))
+                return;
+
+            if (!ValidarObligatorio(_textosCampos[1], "El nombre es obligatorio."))
+                return;
+
+            if (!ValidarObligatorio(_textosCampos[2], "El documento es obligatorio."))
+                return;
+
+            EjecutarOperacion(() =>
+            {
+                DataTable datos = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Empleado_Registrar",
+                    ("@Apellido", _textosCampos[0].Text.Trim()),
+                    ("@Nombre", _textosCampos[1].Text.Trim()),
+                    ("@Documento", _textosCampos[2].Text.Trim()),
+                    ("@Email", ValorOpcional(_textosCampos[3].Text)),
+                    ("@Telefono", ValorOpcional(_textosCampos[4].Text)));
+
+                MostrarDatos(datos, "Empleado registrado correctamente.");
+                CargarCamposDesdePrimeraFila(datos);
+            });
+        }
+
+        private void BtnActualizar_Click(object? sender, EventArgs e)
+        {
+            if (EsFormularioProveedor())
+            {
+                ActualizarContactoProveedor();
+                return;
+            }
+
+            if (EsFormularioEmpleado())
+                ActualizarEmpleado();
+        }
+
+        private void ActualizarContactoProveedor()
+        {
+            if (!TryObtenerIdSeleccionado("proveedor", out int idProveedor))
                 return;
 
             EjecutarOperacion(() =>
@@ -394,9 +462,64 @@ namespace TiendaIndumentaria.App
             });
         }
 
-        private void BtnDesactivarProveedor_Click(object? sender, EventArgs e)
+        private void ActualizarEmpleado()
         {
-            if (!EsFormularioProveedor() || !TryObtenerIdProveedor(out int idProveedor))
+            if (!TryObtenerIdSeleccionado("empleado", out int idEmpleado))
+                return;
+
+            if (!ValidarObligatorio(_textosCampos[0], "El apellido es obligatorio."))
+                return;
+
+            if (!ValidarObligatorio(_textosCampos[1], "El nombre es obligatorio."))
+                return;
+
+            if (!ValidarObligatorio(_textosCampos[2], "El documento es obligatorio."))
+                return;
+
+            EjecutarOperacion(() =>
+            {
+                DataTable datos = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Empleado_Actualizar",
+                    ("@IdEmpleado", idEmpleado),
+                    ("@Apellido", _textosCampos[0].Text.Trim()),
+                    ("@Nombre", _textosCampos[1].Text.Trim()),
+                    ("@Documento", _textosCampos[2].Text.Trim()),
+                    ("@Email", ValorOpcional(_textosCampos[3].Text)),
+                    ("@Telefono", ValorOpcional(_textosCampos[4].Text)),
+                    ("@Activo", _activoRegistroSeleccionado ?? true));
+
+                MostrarDatos(datos, "Empleado actualizado correctamente.");
+                CargarCamposDesdePrimeraFila(datos);
+            });
+        }
+
+        private void BtnDesactivar_Click(object? sender, EventArgs e)
+        {
+            if (EsFormularioProveedor())
+            {
+                DesactivarProveedor();
+                return;
+            }
+
+            if (EsFormularioEmpleado())
+                DesactivarEmpleado();
+        }
+
+        private void BtnActivar_Click(object? sender, EventArgs e)
+        {
+            if (EsFormularioProveedor())
+            {
+                ActivarProveedor();
+                return;
+            }
+
+            if (EsFormularioEmpleado())
+                ActivarEmpleado();
+        }
+
+        private void DesactivarProveedor()
+        {
+            if (!TryObtenerIdSeleccionado("proveedor", out int idProveedor))
                 return;
 
             var confirmacion = MessageBox.Show(
@@ -419,9 +542,71 @@ namespace TiendaIndumentaria.App
             });
         }
 
+        private void DesactivarEmpleado()
+        {
+            if (!TryObtenerIdSeleccionado("empleado", out int idEmpleado))
+                return;
+
+            var confirmacion = MessageBox.Show(
+                "Se marcara el empleado como inactivo. Desea continuar?",
+                "Confirmar baja logica",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirmacion != DialogResult.Yes)
+                return;
+
+            EjecutarOperacion(() =>
+            {
+                DataTable datos = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Empleado_Desactivar",
+                    ("@IdEmpleado", idEmpleado));
+
+                MostrarDatos(datos, "Empleado desactivado correctamente.");
+                CargarCamposDesdePrimeraFila(datos);
+            });
+        }
+
+        private void ActivarProveedor()
+        {
+            if (!TryObtenerIdSeleccionado("proveedor", out int idProveedor))
+                return;
+
+            EjecutarOperacion(() =>
+            {
+                DataTable datos = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Proveedor_Reactivar",
+                    ("@IdProveedor", idProveedor));
+
+                MostrarDatos(datos, "Proveedor activado correctamente.");
+                CargarCamposDesdePrimeraFila(datos);
+            });
+        }
+
+        private void ActivarEmpleado()
+        {
+            if (!TryObtenerIdSeleccionado("empleado", out int idEmpleado))
+                return;
+
+            EjecutarOperacion(() =>
+            {
+                DataTable datos = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Empleado_Reactivar",
+                    ("@IdEmpleado", idEmpleado));
+
+                MostrarDatos(datos, "Empleado activado correctamente.");
+                CargarCamposDesdePrimeraFila(datos);
+            });
+        }
+
         private bool EsFormularioProveedor()
         {
-            return _opcionActual?.PermiteAccionesProveedor == true;
+            return _opcionActual?.Entidad == "Proveedores";
+        }
+
+        private bool EsFormularioEmpleado()
+        {
+            return _opcionActual?.Entidad == "Empleados";
         }
 
         private void MostrarDatos(DataTable datos, string mensaje)
@@ -457,14 +642,14 @@ namespace TiendaIndumentaria.App
             return false;
         }
 
-        private bool TryObtenerIdProveedor(out int idProveedor)
+        private bool TryObtenerIdSeleccionado(string entidad, out int id)
         {
-            if (int.TryParse(_idRegistroSeleccionado, out idProveedor))
+            if (int.TryParse(_idRegistroSeleccionado, out id))
                 return true;
 
             MessageBox.Show(
-                "Seleccione un proveedor de la grilla antes de continuar.",
-                "Proveedor requerido",
+                $"Seleccione un {entidad} de la grilla antes de continuar.",
+                "Registro requerido",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
             return false;
@@ -516,6 +701,7 @@ namespace TiendaIndumentaria.App
             _idRegistroSeleccionado = _opcionActual == null
                 ? null
                 : Texto(fila, _opcionActual.ColumnaId);
+            _activoRegistroSeleccionado = ObtenerActivoSeleccionado(Texto(fila, "Activo"));
             ActualizarTituloEntidad();
         }
 
@@ -524,7 +710,26 @@ namespace TiendaIndumentaria.App
             _idRegistroSeleccionado = _opcionActual == null
                 ? null
                 : Texto(fila, _opcionActual.ColumnaId);
+            _activoRegistroSeleccionado = ObtenerActivoSeleccionado(Texto(fila, "Activo"));
             ActualizarTituloEntidad();
+        }
+
+        private static bool? ObtenerActivoSeleccionado(string valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor))
+                return null;
+
+            if (valor == "1" ||
+                valor.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                valor.Equals("si", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (valor == "0" ||
+                valor.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+                valor.Equals("no", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return null;
         }
 
         private void ActualizarTituloEntidad()
@@ -570,6 +775,7 @@ namespace TiendaIndumentaria.App
                 texto.Clear();
 
             _idRegistroSeleccionado = null;
+            _activoRegistroSeleccionado = null;
             ActualizarTituloEntidad();
 
             if (_textosCampos.Length > 0 && _textosCampos[0].Visible)
@@ -582,7 +788,7 @@ namespace TiendaIndumentaria.App
             public string Sql { get; }
             public string Entidad { get; }
             public string ColumnaId { get; }
-            public bool PermiteAccionesProveedor { get; }
+            public bool PermiteAcciones { get; }
             public CampoFormulario[] Campos { get; }
 
             public OpcionConsulta(
@@ -590,14 +796,14 @@ namespace TiendaIndumentaria.App
                 string sql,
                 string entidad,
                 string columnaId,
-                bool permiteAccionesProveedor,
+                bool permiteAcciones,
                 params (string Etiqueta, string Columna)[] campos)
             {
                 Texto = texto;
                 Sql = sql;
                 Entidad = entidad;
                 ColumnaId = columnaId;
-                PermiteAccionesProveedor = permiteAccionesProveedor;
+                PermiteAcciones = permiteAcciones;
                 Campos = new CampoFormulario[6];
 
                 for (int i = 0; i < Campos.Length; i++)
