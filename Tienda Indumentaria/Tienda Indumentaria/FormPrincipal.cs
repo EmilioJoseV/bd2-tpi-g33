@@ -298,17 +298,32 @@ namespace TiendaIndumentaria.App
                 ("", "")));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
-                "Ultimas ventas",
-                "SELECT TOP (50) IdVenta, IdCliente, FechaVenta, Total " +
+                "Ventas",
+                "SELECT IdVenta, IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total " +
                 "FROM Ventas ORDER BY FechaVenta DESC",
                 "Ventas",
                 "IdVenta",
                 false,
                 ("Id cliente", "IdCliente"),
+                ("Id empleado", "IdEmpleado"),
+                ("Medio pago", "IdMedioPago"),
+                ("Estado", "IdEstadoVenta"),
                 ("Fecha", "FechaVenta"),
-                ("Total", "Total"),
-                ("", ""),
-                ("", "")));
+                ("Total", "Total")));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Compras",
+                "SELECT IdCompra, IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total " +
+                "FROM Compras ORDER BY FechaCompra DESC",
+                "Compras",
+                "IdCompra",
+                false,
+                ("Id proveedor", "IdProveedor"),
+                ("Id empleado", "IdEmpleado"),
+                ("Estado", "IdEstadoCompra"),
+                ("Fecha", "FechaCompra"),
+                ("Comprobante", "NumeroComprobante"),
+                ("Total", "Total")));
 
             if (_comboConsultas.Items.Count > 0)
                 _comboConsultas.SelectedIndex = 0;
