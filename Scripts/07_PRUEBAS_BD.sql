@@ -21,6 +21,25 @@ ORDER BY p.Nombre;
 GO
 
 ------------------------------------------------------------------------------------------------
+-- #2 - Asociar cada venta con un medio de pago
+
+-- Prueba de la asociacion de ventas con su medio de pago
+SELECT v.IdVenta, v.FechaVenta, v.Total, mp.Nombre AS MedioPago
+FROM Ventas v
+INNER JOIN MediosPago mp ON v.IdMedioPago = mp.IdMedioPago
+ORDER BY v.IdVenta;
+GO
+
+-- Prueba de la asociacion de ventas con un medio de pago puntual
+SELECT v.IdVenta, v.FechaVenta, v.Total, mp.Nombre AS MedioPago
+FROM Ventas v
+INNER JOIN MediosPago mp ON v.IdMedioPago = mp.IdMedioPago
+WHERE mp.Nombre = 'Efectivo'
+ORDER BY v.IdVenta;
+------------------------------------------------------------------------------------------------
+GO
+
+------------------------------------------------------------------------------------------------
 -- #3 - Registrar proveedores y mantener sus datos de contacto
 
 -- Prueba de registro de proveedor nuevo.
