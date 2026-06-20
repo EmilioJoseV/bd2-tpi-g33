@@ -1,4 +1,4 @@
-# Explicación del sistema
+# Explicacion del sistema de gestion de inventario y ventas de una tienda del tipo minorista de indumentaria
 
 Se desarrolló un sistema de base de datos orientado a la gestión de inventario
 y ventas de una tienda del tipo minorista de indumentaria con la finalidad de
@@ -31,34 +31,27 @@ consultar el historial de movimiento de cada producto y validar la fluctuación
 del stock a lo largo de los datos registrados en el tiempo.
 
 ## Funcionalidades principales
-
-El usuario tendrá la posibilidad de:
-
-- Registrar y administrar productos de la tienda.
-- Clasificar los productos por categorías.
-- Registrar proveedores y mantener sus datos de contacto.
-- Registrar clientes para asociarlos a las ventas realizadas.
-- Registrar empleados responsables de cargar compras, ventas y movimientos
-de stock.
-- Registrar compras de mercadería realizadas a proveedores.
-- Detallar los productos incluidos en cada compra y cada venta, indicando
-cantidad, precio unitario y subtotal.
-- Registrar ventas realizadas a clientes.
-- Asociar cada venta con un medio de pago.
-- Controlar el stock actual de cada producto.
-- Aumentar automáticamente el stock cuando se registra una compra a un
-proveedor.
-- Disminuir automáticamente el stock cuando se registra una venta a un cliente.
-- Registrar movimientos de stock por entradas, salidas o ajustes manuales.
-- Consultar el historial de movimientos de stock de cada producto.
-- Detectar productos cuyo stock se encuentra por debajo del mínimo definido.
-- Consultar ventas realizadas por fecha, cliente, empleado o medio de pago.
-- Consultar compras realizadas por proveedor o período.
-- Obtener reportes de productos más vendidos.
-- Obtener reportes de ventas mensuales.
-- Calcular el valor total del inventario disponible.
-- Validar operaciones críticas, como evitar ventas sin stock suficiente.
+1. Clasificar los productos por categorías.
+2. Asociar cada venta con un medio de pago.
+3. Registrar y administrar productos de la tienda.
+4. Registrar proveedores y mantener sus datos de contacto.
+5. Registrar clientes para asociarlos a las ventas realizadas.
+6. Registrar empleados responsables de cargar compras, ventas y movimientos de stock.
+7. Registrar compras de mercadería realizadas a proveedores.
+8. Registrar ventas realizadas a clientes.
+9. Detallar los productos incluidos en cada compra y cada venta, indicando cantidad, precio unitario y subtotal.
+10. Registrar movimientos de stock por entradas, salidas o ajustes manuales.
+11. Validar operaciones críticas, como evitar ventas sin stock suficiente.
+12. Aumentar automáticamente el stock cuando se registra una compra a un proveedor.
+13. Disminuir automáticamente el stock cuando se registra una venta a un cliente.
+14. Consultar el historial de movimientos de stock de cada producto.
+15. Detectar productos cuyo stock se encuentra por debajo del mínimo definido.
+16. Consultar ventas realizadas por fecha, cliente, empleado o medio de pago.
+17. Consultar compras realizadas por proveedor o período.
+18. Obtener reportes de productos más vendidos.
+19. Obtener reportes de ventas mensuales.
+20. Controlar el stock actual de cada producto.
+21. Calcular el valor total del inventario disponible.
 
 ## Integrantes
-
 Emilio Vera, Francisco Garcia, Jesus Farias
