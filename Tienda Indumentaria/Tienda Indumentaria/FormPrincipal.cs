@@ -168,11 +168,7 @@ namespace TiendaIndumentaria.App
             consultas.DropDownItems.Add(CrearItemMenu("Compras", () => SeleccionarApartado("Compras")));
 
             var configuracion = new ToolStripMenuItem("Configuracion");
-            var nuevaCategoria = new ToolStripMenuItem("Nueva categoria")
-            {
-                Enabled = false
-            };
-            configuracion.DropDownItems.Add(nuevaCategoria);
+            configuracion.DropDownItems.Add(CrearItemMenu("Nueva categoria", () => AbrirFormularioRegistro(TipoRegistro.Categoria)));
             configuracion.DropDownItems.Add(CrearItemMenu("Nuevo talle", () => AbrirFormularioRegistro(TipoRegistro.Talle)));
             configuracion.DropDownItems.Add(CrearItemMenu("Nueva marca", () => AbrirFormularioRegistro(TipoRegistro.Marca)));
             configuracion.DropDownItems.Add(CrearItemMenu("Nuevo color", () => AbrirFormularioRegistro(TipoRegistro.Color)));
@@ -338,6 +334,7 @@ namespace TiendaIndumentaria.App
             TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
             return tipo == TipoRegistro.Proveedor ||
                 tipo == TipoRegistro.Empleado ||
+                tipo == TipoRegistro.Categoria ||
                 tipo == TipoRegistro.Talle ||
                 tipo == TipoRegistro.Marca ||
                 tipo == TipoRegistro.Color;
@@ -517,7 +514,9 @@ namespace TiendaIndumentaria.App
                 };
             }
 
-            if (tipoRegistro == TipoRegistro.Talle || tipoRegistro == TipoRegistro.Marca)
+            if (tipoRegistro == TipoRegistro.Categoria ||
+                tipoRegistro == TipoRegistro.Talle ||
+                tipoRegistro == TipoRegistro.Marca)
             {
                 return new Dictionary<string, string>
                 {
@@ -526,7 +525,7 @@ namespace TiendaIndumentaria.App
                 };
             }
 
-            if (tipoRegistro == TipoRegistro.Color || tipoRegistro == TipoRegistro.Categoria)
+            if (tipoRegistro == TipoRegistro.Color)
             {
                 return new Dictionary<string, string>
                 {
@@ -580,6 +579,8 @@ namespace TiendaIndumentaria.App
                     return "proveedor";
                 case TipoRegistro.Empleado:
                     return "empleado";
+                case TipoRegistro.Categoria:
+                    return "categoria";
                 case TipoRegistro.Talle:
                     return "talle";
                 case TipoRegistro.Marca:
@@ -605,6 +606,12 @@ namespace TiendaIndumentaria.App
                     Conexion.EjecutarProcedimiento(
                         estaActivo ? "dbo.SP_Empleado_Desactivar" : "dbo.SP_Empleado_Reactivar",
                         ("@IdEmpleado", idRegistro));
+                    break;
+
+                case TipoRegistro.Categoria:
+                    Conexion.EjecutarProcedimiento(
+                        estaActivo ? "dbo.SP_Categoria_Desactivar" : "dbo.SP_Categoria_Reactivar",
+                        ("@IdCategoria", idRegistro));
                     break;
 
                 case TipoRegistro.Talle:

@@ -197,6 +197,15 @@ namespace TiendaIndumentaria.App
                 return;
             }
 
+            if (_tipoRegistro == TipoRegistro.Categoria)
+            {
+                if (_modoEdicion)
+                    ActualizarCategoria();
+                else
+                    RegistrarCategoria();
+                return;
+            }
+
             if (_tipoRegistro == TipoRegistro.Talle)
             {
                 if (_modoEdicion)
@@ -295,6 +304,37 @@ namespace TiendaIndumentaria.App
                     ("@Activo", _activoInicial));
 
                 MensajeResultado = "Empleado actualizado correctamente.";
+            });
+        }
+
+        private void RegistrarCategoria()
+        {
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Categoria_Registrar",
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Descripcion", ValorOpcional("Descripcion")));
+
+                MensajeResultado = "Categoria registrada correctamente.";
+            });
+        }
+
+        private void ActualizarCategoria()
+        {
+            if (!_idRegistro.HasValue)
+                return;
+
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Categoria_Actualizar",
+                    ("@IdCategoria", _idRegistro.Value),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Descripcion", ValorOpcional("Descripcion")),
+                    ("@Activo", _activoInicial));
+
+                MensajeResultado = "Categoria actualizada correctamente.";
             });
         }
 

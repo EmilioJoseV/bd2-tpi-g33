@@ -10,3 +10,4 @@ GO
 :r .\06g_SP_Compras.sql
 :r .\06h_SP_DetalleCompras.sql
 :r .\06i_SP_DetalleVentas.sql
+:r .\06j_SP_Categorias.sql
