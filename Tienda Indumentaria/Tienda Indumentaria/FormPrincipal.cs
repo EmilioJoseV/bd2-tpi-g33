@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
@@ -12,22 +13,13 @@ namespace TiendaIndumentaria.App
         private Button _botonEjecutar = null!;
         private DataGridView _grilla = null!;
         private Label _etiquetaEstado = null!;
-        private GroupBox _grupoEntidad = null!;
-
-        private Label[] _etiquetasCampos = null!;
-        private TextBox[] _textosCampos = null!;
-        private string[] _columnasCampos = Array.Empty<string>();
-
-        private Button _botonRegistrar = null!;
-        private Button _botonActualizar = null!;
-        private Button _botonDesactivar = null!;
-        private Button _botonActivar = null!;
-        private Button _botonListar = null!;
-        private Button _botonLimpiar = null!;
-
-        private OpcionConsulta? _opcionActual;
-        private string? _idRegistroSeleccionado;
-        private bool? _activoRegistroSeleccionado;
+        private MenuStrip _menuPrincipal = null!;
+        private ToolStripMenuItem _menuPrincipalEditar = null!;
+        private ToolStripMenuItem _menuPrincipalCambiarEstado = null!;
+        private ContextMenuStrip _menuRegistro = null!;
+        private ToolStripMenuItem _menuEditar = null!;
+        private ToolStripMenuItem _menuCambiarEstado = null!;
+        private DataGridViewRow? _filaSeleccionada;
 
         public FormPrincipal()
         {
@@ -47,26 +39,28 @@ namespace TiendaIndumentaria.App
             var contenedor = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(14),
+                Padding = new Padding(0),
                 ColumnCount = 1,
                 RowCount = 4
             };
+            contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
             contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
-            contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 205));
             contenedor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+
+            _menuPrincipal = CrearMenuPrincipal();
 
             var panelConsulta = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 4,
+                ColumnCount = 3,
                 RowCount = 2,
+                Padding = new Padding(14, 8, 14, 0),
                 Margin = new Padding(0, 0, 0, 8)
             };
             panelConsulta.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 78));
             panelConsulta.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 430));
             panelConsulta.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112));
-            panelConsulta.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             panelConsulta.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             panelConsulta.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
 
@@ -103,17 +97,6 @@ namespace TiendaIndumentaria.App
             panelConsulta.Controls.Add(CrearEtiqueta("Vista:"), 0, 1);
             panelConsulta.Controls.Add(_comboVistas, 1, 1);
 
-            _grupoEntidad = new GroupBox
-            {
-                Text = "Entidad",
-                Dock = DockStyle.Fill,
-                Padding = new Padding(12, 10, 12, 12),
-                Margin = new Padding(0, 0, 0, 10)
-            };
-
-            CrearCamposEntidad();
-            CrearBotonesEntidad();
-
             _grilla = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -122,71 +105,79 @@ namespace TiendaIndumentaria.App
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                Margin = new Padding(0)
+                Margin = new Padding(14, 0, 14, 0)
             };
             _grilla.CellClick += Grilla_CellClick;
-            _grilla.MouseDown += Grilla_MouseDown;
+
+            _menuEditar = new ToolStripMenuItem("Editar");
+            _menuEditar.Click += (_, _) => EditarRegistroSeleccionado();
+
+            _menuCambiarEstado = new ToolStripMenuItem("Inactivar");
+            _menuCambiarEstado.Click += (_, _) => CambiarEstadoRegistroSeleccionado();
+
+            _menuRegistro = new ContextMenuStrip();
+            _menuRegistro.Items.Add(_menuEditar);
+            _menuRegistro.Items.Add(_menuCambiarEstado);
 
             _etiquetaEstado = new Label
             {
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = Color.DimGray
+                ForeColor = Color.DimGray,
+                Padding = new Padding(14, 0, 14, 0)
             };
 
-            contenedor.Controls.Add(panelConsulta, 0, 0);
-            contenedor.Controls.Add(_grupoEntidad, 0, 1);
+            contenedor.Controls.Add(_menuPrincipal, 0, 0);
+            contenedor.Controls.Add(panelConsulta, 0, 1);
             contenedor.Controls.Add(_grilla, 0, 2);
             contenedor.Controls.Add(_etiquetaEstado, 0, 3);
             Controls.Add(contenedor);
+            MainMenuStrip = _menuPrincipal;
         }
 
-        private void CrearCamposEntidad()
+        private MenuStrip CrearMenuPrincipal()
         {
-            int[] lefts = { 22, 180, 548, 22, 360, 588 };
-            int[] tops = { 27, 27, 27, 83, 83, 83 };
-            int[] textTops = { 48, 48, 48, 104, 104, 104 };
-            int[] widths = { 120, 330, 190, 300, 190, 420 };
-
-            _etiquetasCampos = new Label[6];
-            _textosCampos = new TextBox[6];
-
-            for (int i = 0; i < 6; i++)
+            var menu = new MenuStrip
             {
-                _etiquetasCampos[i] = CrearEtiquetaCampo(string.Empty, lefts[i], tops[i], widths[i]);
-                _textosCampos[i] = CrearTexto(lefts[i], textTops[i], widths[i]);
-                _grupoEntidad.Controls.Add(_etiquetasCampos[i]);
-                _grupoEntidad.Controls.Add(_textosCampos[i]);
-            }
+                Dock = DockStyle.Fill,
+                BackColor = Color.Gainsboro,
+                Padding = new Padding(6, 3, 0, 3)
+            };
 
+            var operaciones = new ToolStripMenuItem("Operaciones");
+            operaciones.DropDownItems.Add(CrearItemMenu("Nueva venta", () => AbrirFormularioRegistro(TipoRegistro.Venta)));
+            operaciones.DropDownItems.Add(CrearItemMenu("Nueva compra", () => AbrirFormularioRegistro(TipoRegistro.Compra)));
+
+            var registros = new ToolStripMenuItem("Registros");
+            registros.DropDownItems.Add(CrearItemMenu("Nuevo proveedor", () => AbrirFormularioRegistro(TipoRegistro.Proveedor)));
+            registros.DropDownItems.Add(CrearItemMenu("Nuevo cliente", () => AbrirFormularioRegistro(TipoRegistro.Cliente)));
+            registros.DropDownItems.Add(CrearItemMenu("Nuevo empleado", () => AbrirFormularioRegistro(TipoRegistro.Empleado)));
+            registros.DropDownItems.Add(new ToolStripSeparator());
+            _menuPrincipalEditar = CrearItemMenu("Editar seleccionado", EditarRegistroSeleccionado);
+            _menuPrincipalCambiarEstado = CrearItemMenu("Activar/Inactivar seleccionado", CambiarEstadoRegistroSeleccionado);
+            registros.DropDownItems.Add(_menuPrincipalEditar);
+            registros.DropDownItems.Add(_menuPrincipalCambiarEstado);
+            registros.DropDownOpening += (_, _) => ActualizarMenuGestionSeleccion();
+
+            var consultas = new ToolStripMenuItem("Consultas");
+            consultas.DropDownItems.Add(CrearItemMenu("Proveedores", () => SeleccionarApartado("Proveedores")));
+            consultas.DropDownItems.Add(CrearItemMenu("Clientes", () => SeleccionarApartado("Clientes")));
+            consultas.DropDownItems.Add(CrearItemMenu("Empleados", () => SeleccionarApartado("Empleados")));
+            consultas.DropDownItems.Add(CrearItemMenu("Productos", () => SeleccionarApartado("Productos")));
+            consultas.DropDownItems.Add(CrearItemMenu("Ventas", () => SeleccionarApartado("Ventas")));
+            consultas.DropDownItems.Add(CrearItemMenu("Compras", () => SeleccionarApartado("Compras")));
+
+            menu.Items.Add(operaciones);
+            menu.Items.Add(registros);
+            menu.Items.Add(consultas);
+            return menu;
         }
 
-        private void CrearBotonesEntidad()
+        private static ToolStripMenuItem CrearItemMenu(string texto, Action accion)
         {
-            _botonRegistrar = CrearBoton("Registrar", 22, 148, 110);
-            _botonRegistrar.Click += BtnRegistrar_Click;
-
-            _botonActualizar = CrearBoton("Actualizar contacto", 144, 148, 150);
-            _botonActualizar.Click += BtnActualizar_Click;
-
-            _botonDesactivar = CrearBoton("Desactivar", 306, 148, 110);
-            _botonDesactivar.Click += BtnDesactivar_Click;
-
-            _botonActivar = CrearBoton("Activar", 428, 148, 90);
-            _botonActivar.Click += BtnActivar_Click;
-
-            _botonListar = CrearBoton("Listar", 530, 148, 90);
-            _botonListar.Click += (_, _) => EjecutarConsultaSeleccionada();
-
-            _botonLimpiar = CrearBoton("Limpiar", 632, 148, 90);
-            _botonLimpiar.Click += (_, _) => LimpiarCampos();
-
-            _grupoEntidad.Controls.Add(_botonRegistrar);
-            _grupoEntidad.Controls.Add(_botonActualizar);
-            _grupoEntidad.Controls.Add(_botonDesactivar);
-            _grupoEntidad.Controls.Add(_botonActivar);
-            _grupoEntidad.Controls.Add(_botonListar);
-            _grupoEntidad.Controls.Add(_botonLimpiar);
+            var item = new ToolStripMenuItem(texto);
+            item.Click += (_, _) => accion();
+            return item;
         }
 
         private static Label CrearEtiqueta(string texto)
@@ -201,45 +192,6 @@ namespace TiendaIndumentaria.App
             };
         }
 
-        private static Label CrearEtiquetaCampo(string texto, int left, int top, int width)
-        {
-            return new Label
-            {
-                Text = texto,
-                Left = left,
-                Top = top,
-                Width = width,
-                Height = 18,
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-        }
-
-        private static TextBox CrearTexto(int left, int top, int width)
-        {
-            return new TextBox
-            {
-                Left = left,
-                Top = top,
-                Width = width,
-                Height = 24,
-                BorderStyle = BorderStyle.FixedSingle,
-                BackColor = Color.White
-            };
-        }
-
-        private static Button CrearBoton(string texto, int left, int top, int width)
-        {
-            return new Button
-            {
-                Text = texto,
-                Left = left,
-                Top = top,
-                Width = width,
-                Height = 30,
-                UseVisualStyleBackColor = true
-            };
-        }
-
         private void CargarOpciones()
         {
             _comboConsultas.Items.Add(new OpcionConsulta(
@@ -248,13 +200,15 @@ namespace TiendaIndumentaria.App
                 "FROM Proveedores ORDER BY RazonSocial",
                 "Proveedores",
                 "IdProveedor",
-                true,
-                ("Razon social", "RazonSocial"),
-                ("CUIT", "CUIT"),
-                ("Email", "Email"),
-                ("Telefono", "Telefono"),
-                ("Direccion", "Direccion"),
-                ("", "")));
+                TipoRegistro.Proveedor));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Clientes",
+                "SELECT IdCliente, Apellido, Nombre, Documento, Email, Telefono, Activo " +
+                "FROM Clientes ORDER BY Apellido, Nombre",
+                "Clientes",
+                "IdCliente",
+                TipoRegistro.Cliente));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Empleados",
@@ -262,40 +216,14 @@ namespace TiendaIndumentaria.App
                 "FROM Empleados ORDER BY Apellido, Nombre",
                 "Empleados",
                 "IdEmpleado",
-                true,
-                ("Apellido", "Apellido"),
-                ("Nombre", "Nombre"),
-                ("Documento", "Documento"),
-                ("Email", "Email"),
-                ("Telefono", "Telefono"),
-                ("", "")));
+                TipoRegistro.Empleado));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
-                "Clientes activos",
-                "SELECT IdCliente, Apellido, Nombre, Documento, Email, Telefono, Activo " +
-                "FROM Clientes WHERE Activo = 1 ORDER BY Apellido, Nombre",
-                "Clientes",
-                "IdCliente",
-                false,
-                ("Apellido", "Apellido"),
-                ("Nombre", "Nombre"),
-                ("Documento", "Documento"),
-                ("Email", "Email"),
-                ("Telefono", "Telefono"),
-                ("", "")));
-
-            _comboConsultas.Items.Add(new OpcionConsulta(
-                "Productos (tabla completa)",
+                "Productos",
                 "SELECT * FROM Productos",
                 "Productos",
                 "IdProducto",
-                false,
-                ("Codigo", "CodigoProducto"),
-                ("Nombre", "Nombre"),
-                ("Precio venta", "PrecioVenta"),
-                ("Stock actual", "StockActual"),
-                ("Stock minimo", "StockMinimo"),
-                ("", "")));
+                null));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Ventas",
@@ -303,13 +231,7 @@ namespace TiendaIndumentaria.App
                 "FROM Ventas ORDER BY FechaVenta DESC",
                 "Ventas",
                 "IdVenta",
-                false,
-                ("Id cliente", "IdCliente"),
-                ("Id empleado", "IdEmpleado"),
-                ("Medio pago", "IdMedioPago"),
-                ("Estado", "IdEstadoVenta"),
-                ("Fecha", "FechaVenta"),
-                ("Total", "Total")));
+                TipoRegistro.Venta));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Compras",
@@ -317,13 +239,7 @@ namespace TiendaIndumentaria.App
                 "FROM Compras ORDER BY FechaCompra DESC",
                 "Compras",
                 "IdCompra",
-                false,
-                ("Id proveedor", "IdProveedor"),
-                ("Id empleado", "IdEmpleado"),
-                ("Estado", "IdEstadoCompra"),
-                ("Fecha", "FechaCompra"),
-                ("Comprobante", "NumeroComprobante"),
-                ("Total", "Total")));
+                TipoRegistro.Compra));
 
             if (_comboConsultas.Items.Count > 0)
                 _comboConsultas.SelectedIndex = 0;
@@ -334,10 +250,8 @@ namespace TiendaIndumentaria.App
             if (_comboConsultas.SelectedItem is not OpcionConsulta opcion)
                 return;
 
-            _opcionActual = opcion;
-            ConfigurarFormulario(opcion);
             CargarVistasParaTabla(opcion);
-            LimpiarCampos();
+            EjecutarConsultaSeleccionada();
         }
 
         private void CargarVistasParaTabla(OpcionConsulta opcion)
@@ -346,31 +260,6 @@ namespace TiendaIndumentaria.App
             _comboVistas.Enabled = false;
             _comboVistas.Items.Add($"Sin vistas de {opcion.Entidad}");
             _comboVistas.SelectedIndex = 0;
-        }
-
-        private void ConfigurarFormulario(OpcionConsulta opcion)
-        {
-            _idRegistroSeleccionado = null;
-            ActualizarTituloEntidad();
-            _columnasCampos = new string[_textosCampos.Length];
-
-            for (int i = 0; i < _textosCampos.Length; i++)
-            {
-                CampoFormulario campo = opcion.Campos[i];
-                bool visible = !string.IsNullOrWhiteSpace(campo.Etiqueta);
-
-                _etiquetasCampos[i].Text = campo.Etiqueta;
-                _etiquetasCampos[i].Visible = visible;
-                _textosCampos[i].Visible = visible;
-                _textosCampos[i].ReadOnly = false;
-                _columnasCampos[i] = campo.Columna;
-            }
-
-            _botonRegistrar.Enabled = opcion.PermiteAcciones;
-            _botonActualizar.Enabled = opcion.PermiteAcciones;
-            _botonDesactivar.Enabled = opcion.PermiteAcciones;
-            _botonActivar.Enabled = opcion.PermiteAcciones;
-            _botonActualizar.Text = EsFormularioProveedor() ? "Actualizar contacto" : "Actualizar";
         }
 
         private void EjecutarConsultaSeleccionada()
@@ -385,161 +274,78 @@ namespace TiendaIndumentaria.App
             });
         }
 
-        private void BtnRegistrar_Click(object? sender, EventArgs e)
+        private void Grilla_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
-            if (EsFormularioProveedor())
-            {
-                RegistrarProveedor();
+            if (e.RowIndex < 0)
                 return;
+
+            _filaSeleccionada = _grilla.Rows[e.RowIndex];
+            bool permiteGestion = PermiteGestionarSeleccion();
+            bool estaActivo = ObtenerActivo(_filaSeleccionada);
+
+            _menuEditar.Enabled = permiteGestion;
+            _menuCambiarEstado.Enabled = permiteGestion;
+            _menuCambiarEstado.Text = estaActivo ? "Inactivar" : "Activar";
+            _menuRegistro.Show(_grilla, _grilla.PointToClient(Cursor.Position));
+        }
+
+        private bool PermiteGestionarSeleccion()
+        {
+            TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
+            return tipo == TipoRegistro.Proveedor || tipo == TipoRegistro.Empleado;
+        }
+
+        private void ActualizarMenuGestionSeleccion()
+        {
+            bool permiteGestion = _filaSeleccionada != null && PermiteGestionarSeleccion();
+            bool estaActivo = _filaSeleccionada != null && ObtenerActivo(_filaSeleccionada);
+
+            _menuPrincipalEditar.Enabled = permiteGestion;
+            _menuPrincipalCambiarEstado.Enabled = permiteGestion;
+            _menuPrincipalCambiarEstado.Text = estaActivo
+                ? "Inactivar seleccionado"
+                : "Activar seleccionado";
+        }
+
+        private void EditarRegistroSeleccionado()
+        {
+            OpcionConsulta? opcion = ObtenerOpcionActual();
+            if (opcion == null || _filaSeleccionada == null || !PermiteGestionarSeleccion())
+                return;
+
+            if (!TryObtenerIdSeleccionado(opcion, out int idRegistro))
+                return;
+
+            TipoRegistro tipoRegistro = opcion.TipoRegistro!.Value;
+            using (var formulario = new FormRegistro(
+                tipoRegistro,
+                modoEdicion: true,
+                idRegistro: idRegistro,
+                activoInicial: ObtenerActivo(_filaSeleccionada),
+                valoresIniciales: ValoresParaEdicion(tipoRegistro, _filaSeleccionada)))
+            {
+                if (formulario.ShowDialog(this) != DialogResult.OK || formulario.Resultado == null)
+                    return;
+
+                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
             }
-
-            if (EsFormularioEmpleado())
-                RegistrarEmpleado();
         }
 
-        private void RegistrarProveedor()
+        private void CambiarEstadoRegistroSeleccionado()
         {
-            if (!ValidarObligatorio(_textosCampos[0], "La razon social es obligatoria."))
+            OpcionConsulta? opcion = ObtenerOpcionActual();
+            if (opcion == null || _filaSeleccionada == null || !PermiteGestionarSeleccion())
                 return;
 
-            if (!ValidarObligatorio(_textosCampos[1], "El CUIT es obligatorio."))
+            if (!TryObtenerIdSeleccionado(opcion, out int idRegistro))
                 return;
 
-            EjecutarOperacion(() =>
-            {
-                DataTable datos = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Proveedor_Registrar",
-                    ("@RazonSocial", _textosCampos[0].Text.Trim()),
-                    ("@CUIT", _textosCampos[1].Text.Trim()),
-                    ("@Email", ValorOpcional(_textosCampos[2].Text)),
-                    ("@Telefono", ValorOpcional(_textosCampos[3].Text)),
-                    ("@Direccion", ValorOpcional(_textosCampos[4].Text)));
-
-                MostrarDatos(datos, "Proveedor registrado correctamente.");
-                CargarCamposDesdePrimeraFila(datos);
-            });
-        }
-
-        private void RegistrarEmpleado()
-        {
-            if (!ValidarObligatorio(_textosCampos[0], "El apellido es obligatorio."))
-                return;
-
-            if (!ValidarObligatorio(_textosCampos[1], "El nombre es obligatorio."))
-                return;
-
-            if (!ValidarObligatorio(_textosCampos[2], "El documento es obligatorio."))
-                return;
-
-            EjecutarOperacion(() =>
-            {
-                DataTable datos = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Empleado_Registrar",
-                    ("@Apellido", _textosCampos[0].Text.Trim()),
-                    ("@Nombre", _textosCampos[1].Text.Trim()),
-                    ("@Documento", _textosCampos[2].Text.Trim()),
-                    ("@Email", ValorOpcional(_textosCampos[3].Text)),
-                    ("@Telefono", ValorOpcional(_textosCampos[4].Text)));
-
-                MostrarDatos(datos, "Empleado registrado correctamente.");
-                CargarCamposDesdePrimeraFila(datos);
-            });
-        }
-
-        private void BtnActualizar_Click(object? sender, EventArgs e)
-        {
-            if (EsFormularioProveedor())
-            {
-                ActualizarContactoProveedor();
-                return;
-            }
-
-            if (EsFormularioEmpleado())
-                ActualizarEmpleado();
-        }
-
-        private void ActualizarContactoProveedor()
-        {
-            if (!TryObtenerIdSeleccionado("proveedor", out int idProveedor))
-                return;
-
-            EjecutarOperacion(() =>
-            {
-                DataTable datos = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Proveedor_ActualizarContacto",
-                    ("@IdProveedor", idProveedor),
-                    ("@Email", ValorOpcional(_textosCampos[2].Text)),
-                    ("@Telefono", ValorOpcional(_textosCampos[3].Text)),
-                    ("@Direccion", ValorOpcional(_textosCampos[4].Text)));
-
-                MostrarDatos(datos, "Contacto actualizado correctamente.");
-                CargarCamposDesdePrimeraFila(datos);
-            });
-        }
-
-        private void ActualizarEmpleado()
-        {
-            if (!TryObtenerIdSeleccionado("empleado", out int idEmpleado))
-                return;
-
-            if (!ValidarObligatorio(_textosCampos[0], "El apellido es obligatorio."))
-                return;
-
-            if (!ValidarObligatorio(_textosCampos[1], "El nombre es obligatorio."))
-                return;
-
-            if (!ValidarObligatorio(_textosCampos[2], "El documento es obligatorio."))
-                return;
-
-            EjecutarOperacion(() =>
-            {
-                DataTable datos = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Empleado_Actualizar",
-                    ("@IdEmpleado", idEmpleado),
-                    ("@Apellido", _textosCampos[0].Text.Trim()),
-                    ("@Nombre", _textosCampos[1].Text.Trim()),
-                    ("@Documento", _textosCampos[2].Text.Trim()),
-                    ("@Email", ValorOpcional(_textosCampos[3].Text)),
-                    ("@Telefono", ValorOpcional(_textosCampos[4].Text)),
-                    ("@Activo", _activoRegistroSeleccionado ?? true));
-
-                MostrarDatos(datos, "Empleado actualizado correctamente.");
-                CargarCamposDesdePrimeraFila(datos);
-            });
-        }
-
-        private void BtnDesactivar_Click(object? sender, EventArgs e)
-        {
-            if (EsFormularioProveedor())
-            {
-                DesactivarProveedor();
-                return;
-            }
-
-            if (EsFormularioEmpleado())
-                DesactivarEmpleado();
-        }
-
-        private void BtnActivar_Click(object? sender, EventArgs e)
-        {
-            if (EsFormularioProveedor())
-            {
-                ActivarProveedor();
-                return;
-            }
-
-            if (EsFormularioEmpleado())
-                ActivarEmpleado();
-        }
-
-        private void DesactivarProveedor()
-        {
-            if (!TryObtenerIdSeleccionado("proveedor", out int idProveedor))
-                return;
-
+            string entidad = opcion.TipoRegistro == TipoRegistro.Proveedor ? "proveedor" : "empleado";
+            bool estaActivo = ObtenerActivo(_filaSeleccionada);
+            string accion = estaActivo ? "inactivar" : "activar";
             var confirmacion = MessageBox.Show(
-                "Se marcara el proveedor como inactivo. Desea continuar?",
-                "Confirmar baja logica",
+                $"Se va a {accion} el {entidad} seleccionado. Desea continuar?",
+                $"Confirmar {accion}",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -548,86 +354,162 @@ namespace TiendaIndumentaria.App
 
             EjecutarOperacion(() =>
             {
-                DataTable datos = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Proveedor_Desactivar",
-                    ("@IdProveedor", idProveedor));
+                if (opcion.TipoRegistro == TipoRegistro.Proveedor)
+                {
+                    Conexion.EjecutarComando(
+                        "UPDATE Proveedores SET Activo = @Activo WHERE IdProveedor = @IdProveedor",
+                        ("@Activo", !estaActivo),
+                        ("@IdProveedor", idRegistro));
+                }
+                else
+                {
+                    Conexion.EjecutarComando(
+                        "UPDATE Empleados SET Activo = @Activo WHERE IdEmpleado = @IdEmpleado",
+                        ("@Activo", !estaActivo),
+                        ("@IdEmpleado", idRegistro));
+                }
 
-                MostrarDatos(datos, "Proveedor desactivado correctamente.");
-                CargarCamposDesdePrimeraFila(datos);
+                RefrescarConsultaActual($"{MayusculaInicial(entidad)} {(estaActivo ? "inactivado" : "activado")} correctamente.");
             });
         }
 
-        private void DesactivarEmpleado()
+        private void AbrirFormularioRegistro(TipoRegistro tipoRegistro)
         {
-            if (!TryObtenerIdSeleccionado("empleado", out int idEmpleado))
-                return;
-
-            var confirmacion = MessageBox.Show(
-                "Se marcara el empleado como inactivo. Desea continuar?",
-                "Confirmar baja logica",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (confirmacion != DialogResult.Yes)
-                return;
-
-            EjecutarOperacion(() =>
+            using (var formulario = new FormRegistro(tipoRegistro))
             {
-                DataTable datos = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Empleado_Desactivar",
-                    ("@IdEmpleado", idEmpleado));
+                if (formulario.ShowDialog(this) != DialogResult.OK)
+                    return;
 
-                MostrarDatos(datos, "Empleado desactivado correctamente.");
-                CargarCamposDesdePrimeraFila(datos);
-            });
+                if (formulario.Resultado == null)
+                {
+                    _etiquetaEstado.Text = formulario.MensajeResultado;
+                    return;
+                }
+
+                SeleccionarApartado(EntidadParaRegistro(tipoRegistro));
+                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+            }
         }
 
-        private void ActivarProveedor()
+        private void SeleccionarApartado(string entidad)
         {
-            if (!TryObtenerIdSeleccionado("proveedor", out int idProveedor))
-                return;
-
-            EjecutarOperacion(() =>
+            for (int i = 0; i < _comboConsultas.Items.Count; i++)
             {
-                DataTable datos = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Proveedor_Reactivar",
-                    ("@IdProveedor", idProveedor));
-
-                MostrarDatos(datos, "Proveedor activado correctamente.");
-                CargarCamposDesdePrimeraFila(datos);
-            });
+                if (_comboConsultas.Items[i] is OpcionConsulta opcion && opcion.Entidad == entidad)
+                {
+                    _comboConsultas.SelectedIndex = i;
+                    EjecutarConsultaSeleccionada();
+                    return;
+                }
+            }
         }
 
-        private void ActivarEmpleado()
+        private static string EntidadParaRegistro(TipoRegistro tipoRegistro)
         {
-            if (!TryObtenerIdSeleccionado("empleado", out int idEmpleado))
-                return;
-
-            EjecutarOperacion(() =>
+            switch (tipoRegistro)
             {
-                DataTable datos = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Empleado_Reactivar",
-                    ("@IdEmpleado", idEmpleado));
-
-                MostrarDatos(datos, "Empleado activado correctamente.");
-                CargarCamposDesdePrimeraFila(datos);
-            });
-        }
-
-        private bool EsFormularioProveedor()
-        {
-            return _opcionActual?.Entidad == "Proveedores";
-        }
-
-        private bool EsFormularioEmpleado()
-        {
-            return _opcionActual?.Entidad == "Empleados";
+                case TipoRegistro.Compra:
+                    return "Compras";
+                case TipoRegistro.Venta:
+                    return "Ventas";
+                case TipoRegistro.Proveedor:
+                    return "Proveedores";
+                case TipoRegistro.Empleado:
+                    return "Empleados";
+                default:
+                    return "Clientes";
+            }
         }
 
         private void MostrarDatos(DataTable datos, string mensaje)
         {
             _grilla.DataSource = datos;
+            _filaSeleccionada = null;
             _etiquetaEstado.Text = mensaje;
+        }
+
+        private void RefrescarConsultaActual(string mensaje)
+        {
+            if (_comboConsultas.SelectedItem is not OpcionConsulta opcion)
+                return;
+
+            DataTable datos = Conexion.EjecutarConsulta(opcion.Sql);
+            MostrarDatos(datos, mensaje);
+        }
+
+        private OpcionConsulta? ObtenerOpcionActual()
+        {
+            return _comboConsultas.SelectedItem as OpcionConsulta;
+        }
+
+        private bool TryObtenerIdSeleccionado(OpcionConsulta opcion, out int idRegistro)
+        {
+            idRegistro = 0;
+            if (_filaSeleccionada == null)
+                return false;
+
+            string valor = Texto(_filaSeleccionada, opcion.ColumnaId);
+            if (int.TryParse(valor, out idRegistro))
+                return true;
+
+            MessageBox.Show(
+                "No se pudo identificar el registro seleccionado.",
+                "Registro requerido",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            return false;
+        }
+
+        private static Dictionary<string, string> ValoresParaEdicion(TipoRegistro tipoRegistro, DataGridViewRow fila)
+        {
+            if (tipoRegistro == TipoRegistro.Proveedor)
+            {
+                return new Dictionary<string, string>
+                {
+                    ["RazonSocial"] = Texto(fila, "RazonSocial"),
+                    ["CUIT"] = Texto(fila, "CUIT"),
+                    ["Email"] = Texto(fila, "Email"),
+                    ["Telefono"] = Texto(fila, "Telefono"),
+                    ["Direccion"] = Texto(fila, "Direccion")
+                };
+            }
+
+            return new Dictionary<string, string>
+            {
+                ["Apellido"] = Texto(fila, "Apellido"),
+                ["Nombre"] = Texto(fila, "Nombre"),
+                ["Documento"] = Texto(fila, "Documento"),
+                ["Email"] = Texto(fila, "Email"),
+                ["Telefono"] = Texto(fila, "Telefono")
+            };
+        }
+
+        private static bool ObtenerActivo(DataGridViewRow fila)
+        {
+            string valor = Texto(fila, "Activo");
+            return valor == "1" ||
+                valor.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                valor.Equals("si", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string Texto(DataGridViewRow fila, string columna)
+        {
+            if (fila.DataGridView == null || !fila.DataGridView.Columns.Contains(columna))
+                return string.Empty;
+
+            object? valor = fila.Cells[columna].Value;
+            if (valor == null || valor == DBNull.Value)
+                return string.Empty;
+
+            return Convert.ToString(valor) ?? string.Empty;
+        }
+
+        private static string MayusculaInicial(string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+                return texto;
+
+            return char.ToUpperInvariant(texto[0]) + texto.Substring(1);
         }
 
         private void EjecutarOperacion(Action operacion)
@@ -647,200 +529,29 @@ namespace TiendaIndumentaria.App
             }
         }
 
-        private bool ValidarObligatorio(TextBox texto, string mensaje)
-        {
-            if (!string.IsNullOrWhiteSpace(texto.Text))
-                return true;
-
-            MessageBox.Show(mensaje, "Dato requerido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            texto.Focus();
-            return false;
-        }
-
-        private bool TryObtenerIdSeleccionado(string entidad, out int id)
-        {
-            if (int.TryParse(_idRegistroSeleccionado, out id))
-                return true;
-
-            MessageBox.Show(
-                $"Seleccione un {entidad} de la grilla antes de continuar.",
-                "Registro requerido",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
-            return false;
-        }
-
-        private static object? ValorOpcional(string texto)
-        {
-            return string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
-        }
-
-        private void Grilla_CellClick(object? sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0)
-                return;
-
-            CargarCamposDesdeFila(_grilla.Rows[e.RowIndex]);
-        }
-
-        private void Grilla_MouseDown(object? sender, MouseEventArgs e)
-        {
-            DataGridView.HitTestInfo hit = _grilla.HitTest(e.X, e.Y);
-            if (hit.Type == DataGridViewHitTestType.Cell && hit.RowIndex >= 0)
-                return;
-
-            _grilla.ClearSelection();
-            LimpiarCampos();
-        }
-
-        private void CargarCamposDesdePrimeraFila(DataTable datos)
-        {
-            if (datos.Rows.Count == 0)
-                return;
-
-            DataRow fila = datos.Rows[0];
-            CargarIdSeleccionado(fila);
-            for (int i = 0; i < _textosCampos.Length; i++)
-                _textosCampos[i].Text = Texto(fila, _columnasCampos[i]);
-        }
-
-        private void CargarCamposDesdeFila(DataGridViewRow fila)
-        {
-            CargarIdSeleccionado(fila);
-            for (int i = 0; i < _textosCampos.Length; i++)
-                _textosCampos[i].Text = Texto(fila, _columnasCampos[i]);
-        }
-
-        private void CargarIdSeleccionado(DataRow fila)
-        {
-            _idRegistroSeleccionado = _opcionActual == null
-                ? null
-                : Texto(fila, _opcionActual.ColumnaId);
-            _activoRegistroSeleccionado = ObtenerActivoSeleccionado(Texto(fila, "Activo"));
-            ActualizarTituloEntidad();
-        }
-
-        private void CargarIdSeleccionado(DataGridViewRow fila)
-        {
-            _idRegistroSeleccionado = _opcionActual == null
-                ? null
-                : Texto(fila, _opcionActual.ColumnaId);
-            _activoRegistroSeleccionado = ObtenerActivoSeleccionado(Texto(fila, "Activo"));
-            ActualizarTituloEntidad();
-        }
-
-        private static bool? ObtenerActivoSeleccionado(string valor)
-        {
-            if (string.IsNullOrWhiteSpace(valor))
-                return null;
-
-            if (valor == "1" ||
-                valor.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                valor.Equals("si", StringComparison.OrdinalIgnoreCase))
-                return true;
-
-            if (valor == "0" ||
-                valor.Equals("false", StringComparison.OrdinalIgnoreCase) ||
-                valor.Equals("no", StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            return null;
-        }
-
-        private void ActualizarTituloEntidad()
-        {
-            if (_opcionActual == null)
-            {
-                _grupoEntidad.Text = "Entidad";
-                return;
-            }
-
-            _grupoEntidad.Text = string.IsNullOrWhiteSpace(_idRegistroSeleccionado)
-                ? _opcionActual.Entidad
-                : $"{_opcionActual.Entidad} - seleccionado #{_idRegistroSeleccionado}";
-        }
-
-        private static string Texto(DataRow fila, string columna)
-        {
-            if (string.IsNullOrWhiteSpace(columna) ||
-                !fila.Table.Columns.Contains(columna) ||
-                fila[columna] == DBNull.Value)
-                return string.Empty;
-
-            return Convert.ToString(fila[columna]) ?? string.Empty;
-        }
-
-        private static string Texto(DataGridViewRow fila, string columna)
-        {
-            if (string.IsNullOrWhiteSpace(columna) ||
-                fila.DataGridView == null ||
-                !fila.DataGridView.Columns.Contains(columna))
-                return string.Empty;
-
-            object? valor = fila.Cells[columna].Value;
-            if (valor == null || valor == DBNull.Value)
-                return string.Empty;
-
-            return Convert.ToString(valor) ?? string.Empty;
-        }
-
-        private void LimpiarCampos()
-        {
-            foreach (TextBox texto in _textosCampos)
-                texto.Clear();
-
-            _idRegistroSeleccionado = null;
-            _activoRegistroSeleccionado = null;
-            ActualizarTituloEntidad();
-
-            if (_textosCampos.Length > 0 && _textosCampos[0].Visible)
-                _textosCampos[0].Focus();
-        }
-
         private sealed class OpcionConsulta
         {
             public string Texto { get; }
             public string Sql { get; }
             public string Entidad { get; }
             public string ColumnaId { get; }
-            public bool PermiteAcciones { get; }
-            public CampoFormulario[] Campos { get; }
+            public TipoRegistro? TipoRegistro { get; }
 
             public OpcionConsulta(
                 string texto,
                 string sql,
                 string entidad,
                 string columnaId,
-                bool permiteAcciones,
-                params (string Etiqueta, string Columna)[] campos)
+                TipoRegistro? tipoRegistro)
             {
                 Texto = texto;
                 Sql = sql;
                 Entidad = entidad;
                 ColumnaId = columnaId;
-                PermiteAcciones = permiteAcciones;
-                Campos = new CampoFormulario[6];
-
-                for (int i = 0; i < Campos.Length; i++)
-                {
-                    var campo = i < campos.Length ? campos[i] : (string.Empty, string.Empty);
-                    Campos[i] = new CampoFormulario(campo.Item1, campo.Item2);
-                }
+                TipoRegistro = tipoRegistro;
             }
 
             public override string ToString() => Texto;
-        }
-
-        private sealed class CampoFormulario
-        {
-            public string Etiqueta { get; }
-            public string Columna { get; }
-
-            public CampoFormulario(string etiqueta, string columna)
-            {
-                Etiqueta = etiqueta;
-                Columna = columna;
-            }
         }
     }
 }

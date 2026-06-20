@@ -1,0 +1,493 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Drawing;
+using System.Globalization;
+using System.Windows.Forms;
+
+namespace TiendaIndumentaria.App
+{
+    public enum TipoRegistro
+    {
+        Compra,
+        Venta,
+        Proveedor,
+        Cliente,
+        Empleado
+    }
+
+    public class FormRegistro : Form
+    {
+        private readonly TipoRegistro _tipoRegistro;
+        private readonly bool _modoEdicion;
+        private readonly int? _idRegistro;
+        private readonly bool _activoInicial;
+        private readonly IReadOnlyDictionary<string, string> _valoresIniciales;
+        private readonly Dictionary<string, TextBox> _campos = new Dictionary<string, TextBox>();
+        private TextBox? _textoTotal;
+        private Button _botonConfirmar = null!;
+        private Button _botonCancelar = null!;
+
+        public DataTable? Resultado { get; private set; }
+        public string MensajeResultado { get; private set; } = string.Empty;
+
+        public FormRegistro(
+            TipoRegistro tipoRegistro,
+            bool modoEdicion = false,
+            int? idRegistro = null,
+            bool activoInicial = true,
+            IReadOnlyDictionary<string, string>? valoresIniciales = null)
+        {
+            _tipoRegistro = tipoRegistro;
+            _modoEdicion = modoEdicion;
+            _idRegistro = idRegistro;
+            _activoInicial = activoInicial;
+            _valoresIniciales = valoresIniciales ?? new Dictionary<string, string>();
+            ConstruirInterfaz();
+            CargarValoresIniciales();
+            ActualizarTotal();
+        }
+
+        private void ConstruirInterfaz()
+        {
+            Text = TituloFormulario();
+            Width = 500;
+            Height = AltoFormulario();
+            MinimumSize = new Size(500, AltoFormulario());
+            MaximumSize = new Size(500, AltoFormulario());
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+
+            var campos = CamposFormulario();
+            var contenedor = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(16),
+                ColumnCount = 2,
+                RowCount = campos.Length + 1
+            };
+
+            contenedor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155));
+            contenedor.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            for (int i = 0; i < campos.Length; i++)
+                contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            contenedor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            for (int i = 0; i < campos.Length; i++)
+                AgregarCampo(contenedor, i, campos[i].Clave, campos[i].Etiqueta, campos[i].SoloLectura);
+
+            if (_campos.TryGetValue("Cantidad", out TextBox? textoCantidad))
+                textoCantidad.TextChanged += (_, _) => ActualizarTotal();
+
+            if (_campos.TryGetValue("PrecioUnitario", out TextBox? textoPrecio))
+                textoPrecio.TextChanged += (_, _) => ActualizarTotal();
+
+            _botonConfirmar = new Button
+            {
+                Text = _modoEdicion ? "Guardar" : "Confirmar",
+                Width = 105,
+                Height = 30,
+                UseVisualStyleBackColor = true
+            };
+            _botonConfirmar.Click += BtnConfirmar_Click;
+
+            _botonCancelar = new Button
+            {
+                Text = "Cancelar",
+                Width = 105,
+                Height = 30,
+                DialogResult = DialogResult.Cancel,
+                UseVisualStyleBackColor = true
+            };
+
+            var panelBotones = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                Margin = new Padding(0, 12, 0, 0)
+            };
+            panelBotones.Controls.Add(_botonConfirmar);
+            panelBotones.Controls.Add(_botonCancelar);
+
+            contenedor.Controls.Add(panelBotones, 0, campos.Length);
+            contenedor.SetColumnSpan(panelBotones, 2);
+
+            AcceptButton = _botonConfirmar;
+            CancelButton = _botonCancelar;
+            Controls.Add(contenedor);
+        }
+
+        private void AgregarCampo(
+            TableLayoutPanel contenedor,
+            int fila,
+            string clave,
+            string etiqueta,
+            bool soloLectura)
+        {
+            var texto = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 4, 0, 4),
+                ReadOnly = soloLectura
+            };
+
+            if (soloLectura)
+                texto.BackColor = SystemColors.Control;
+
+            contenedor.Controls.Add(new Label
+            {
+                Text = etiqueta,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false,
+                Margin = new Padding(0, 0, 8, 0)
+            }, 0, fila);
+
+            contenedor.Controls.Add(texto, 1, fila);
+            _campos[clave] = texto;
+
+            if (clave == "Total")
+                _textoTotal = texto;
+        }
+
+        private void CargarValoresIniciales()
+        {
+            foreach ((string clave, string valor) in _valoresIniciales)
+            {
+                if (_campos.TryGetValue(clave, out TextBox? texto))
+                    texto.Text = valor;
+            }
+        }
+
+        private void BtnConfirmar_Click(object? sender, EventArgs e)
+        {
+            if (!ValidarCampos())
+                return;
+
+            if (_tipoRegistro == TipoRegistro.Proveedor)
+            {
+                if (_modoEdicion)
+                    ActualizarProveedor();
+                else
+                    RegistrarProveedor();
+                return;
+            }
+
+            if (_tipoRegistro == TipoRegistro.Cliente)
+            {
+                ConfirmarSinPersistir();
+                return;
+            }
+
+            if (_tipoRegistro == TipoRegistro.Empleado)
+            {
+                if (_modoEdicion)
+                    ActualizarEmpleado();
+                else
+                    RegistrarEmpleado();
+                return;
+            }
+
+            ConfirmarSinPersistir();
+        }
+
+        private void RegistrarProveedor()
+        {
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Proveedor_Registrar",
+                    ("@RazonSocial", ValorCampo("RazonSocial")),
+                    ("@CUIT", ValorCampo("CUIT")),
+                    ("@Email", ValorOpcional("Email")),
+                    ("@Telefono", ValorOpcional("Telefono")),
+                    ("@Direccion", ValorOpcional("Direccion")));
+
+                MensajeResultado = "Proveedor registrado correctamente.";
+            });
+        }
+
+        private void ActualizarProveedor()
+        {
+            if (!_idRegistro.HasValue)
+                return;
+
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Proveedor_ActualizarContacto",
+                    ("@IdProveedor", _idRegistro.Value),
+                    ("@Email", ValorOpcional("Email")),
+                    ("@Telefono", ValorOpcional("Telefono")),
+                    ("@Direccion", ValorOpcional("Direccion")));
+
+                MensajeResultado = "Proveedor actualizado correctamente.";
+            });
+        }
+
+        private void RegistrarEmpleado()
+        {
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Empleado_Registrar",
+                    ("@Apellido", ValorCampo("Apellido")),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Documento", ValorCampo("Documento")),
+                    ("@Email", ValorOpcional("Email")),
+                    ("@Telefono", ValorOpcional("Telefono")));
+
+                MensajeResultado = "Empleado registrado correctamente.";
+            });
+        }
+
+        private void ActualizarEmpleado()
+        {
+            if (!_idRegistro.HasValue)
+                return;
+
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Empleado_Actualizar",
+                    ("@IdEmpleado", _idRegistro.Value),
+                    ("@Apellido", ValorCampo("Apellido")),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Documento", ValorCampo("Documento")),
+                    ("@Email", ValorOpcional("Email")),
+                    ("@Telefono", ValorOpcional("Telefono")),
+                    ("@Activo", _activoInicial));
+
+                MensajeResultado = "Empleado actualizado correctamente.";
+            });
+        }
+
+        private void ConfirmarSinPersistir()
+        {
+            MensajeResultado = $"Formulario de {NombreRegistro()} cargado. No se guardo en la base de datos.";
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+
+        private void EjecutarRegistro(Action registro)
+        {
+            try
+            {
+                registro();
+                DialogResult = DialogResult.OK;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Error de base de datos",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private bool ValidarCampos()
+        {
+            foreach ((string clave, TextBox texto) in _campos)
+            {
+                if (clave == "Comprobante" || clave == "Email" || clave == "Telefono" || clave == "Direccion" || clave == "Total")
+                    continue;
+
+                if (string.IsNullOrWhiteSpace(texto.Text))
+                {
+                    MostrarDatoRequerido(texto, EtiquetaCampo(clave));
+                    return false;
+                }
+            }
+
+            if (EsOperacion())
+            {
+                if (!TryObtenerEntero("Cantidad", "cantidad", out int cantidad) || cantidad <= 0)
+                {
+                    MostrarDatoInvalido(_campos["Cantidad"], "Ingrese una cantidad mayor a cero.");
+                    return false;
+                }
+
+                if (!TryObtenerDecimal("PrecioUnitario", out decimal precioUnitario) || precioUnitario <= 0)
+                {
+                    MostrarDatoInvalido(_campos["PrecioUnitario"], "Ingrese un precio unitario valido.");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ActualizarTotal()
+        {
+            if (_textoTotal == null)
+                return;
+
+            if (TryObtenerEntero("Cantidad", "cantidad", out int cantidad) &&
+                TryObtenerDecimal("PrecioUnitario", out decimal precioUnitario) &&
+                cantidad > 0 &&
+                precioUnitario > 0)
+            {
+                _textoTotal.Text = (cantidad * precioUnitario).ToString("0.00");
+                return;
+            }
+
+            _textoTotal.Clear();
+        }
+
+        private bool TryObtenerEntero(string clave, string campo, out int valor)
+        {
+            valor = 0;
+            return _campos.TryGetValue(clave, out TextBox? texto) &&
+                int.TryParse(texto.Text.Trim(), out valor);
+        }
+
+        private bool TryObtenerDecimal(string clave, out decimal valor)
+        {
+            valor = 0;
+            if (!_campos.TryGetValue(clave, out TextBox? texto))
+                return false;
+
+            string entrada = texto.Text.Trim();
+            return decimal.TryParse(entrada, NumberStyles.Number, CultureInfo.CurrentCulture, out valor) ||
+                decimal.TryParse(entrada, NumberStyles.Number, CultureInfo.InvariantCulture, out valor) ||
+                decimal.TryParse(entrada.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out valor);
+        }
+
+        private string ValorCampo(string clave)
+        {
+            return _campos[clave].Text.Trim();
+        }
+
+        private object? ValorOpcional(string clave)
+        {
+            string valor = ValorCampo(clave);
+            return string.IsNullOrWhiteSpace(valor) ? null : valor;
+        }
+
+        private void MostrarDatoRequerido(TextBox texto, string campo)
+        {
+            MessageBox.Show(
+                $"Ingrese {campo}.",
+                "Dato requerido",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            texto.Focus();
+        }
+
+        private void MostrarDatoInvalido(TextBox texto, string mensaje)
+        {
+            MessageBox.Show(
+                mensaje,
+                "Dato invalido",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+            texto.Focus();
+        }
+
+        private (string Clave, string Etiqueta, bool SoloLectura)[] CamposFormulario()
+        {
+            switch (_tipoRegistro)
+            {
+                case TipoRegistro.Compra:
+                    return new[]
+                    {
+                        ("IdProveedor", "Id proveedor", false),
+                        ("IdEmpleado", "Id empleado", false),
+                        ("Comprobante", "Comprobante", false),
+                        ("IdProducto", "Id producto", false),
+                        ("Cantidad", "Cantidad", false),
+                        ("PrecioUnitario", "Precio unitario", false),
+                        ("Total", "Total", true)
+                    };
+
+                case TipoRegistro.Venta:
+                    return new[]
+                    {
+                        ("IdCliente", "Id cliente", false),
+                        ("IdEmpleado", "Id empleado", false),
+                        ("IdMedioPago", "Id medio pago", false),
+                        ("IdProducto", "Id producto", false),
+                        ("Cantidad", "Cantidad", false),
+                        ("PrecioUnitario", "Precio unitario", false),
+                        ("Total", "Total", true)
+                    };
+
+                case TipoRegistro.Proveedor:
+                    return new[]
+                    {
+                        ("RazonSocial", "Razon social", _modoEdicion),
+                        ("CUIT", "CUIT", _modoEdicion),
+                        ("Email", "Email", false),
+                        ("Telefono", "Telefono", false),
+                        ("Direccion", "Direccion", false)
+                    };
+
+                case TipoRegistro.Cliente:
+                case TipoRegistro.Empleado:
+                    return new[]
+                    {
+                        ("Apellido", "Apellido", false),
+                        ("Nombre", "Nombre", false),
+                        ("Documento", "Documento", false),
+                        ("Email", "Email", false),
+                        ("Telefono", "Telefono", false)
+                    };
+
+                default:
+                    return Array.Empty<(string Clave, string Etiqueta, bool SoloLectura)>();
+            }
+        }
+
+        private string TituloFormulario()
+        {
+            return _modoEdicion
+                ? $"Editar {NombreRegistro()}"
+                : $"Registrar {NombreRegistro()}";
+        }
+
+        private string NombreRegistro()
+        {
+            switch (_tipoRegistro)
+            {
+                case TipoRegistro.Compra:
+                    return "compra";
+                case TipoRegistro.Venta:
+                    return "venta";
+                case TipoRegistro.Proveedor:
+                    return "proveedor";
+                case TipoRegistro.Cliente:
+                    return "cliente";
+                default:
+                    return "empleado";
+            }
+        }
+
+        private string EtiquetaCampo(string clave)
+        {
+            foreach ((string Clave, string Etiqueta, bool SoloLectura) campo in CamposFormulario())
+            {
+                if (campo.Clave == clave)
+                    return campo.Etiqueta.ToLowerInvariant();
+            }
+
+            return "el dato requerido";
+        }
+
+        private bool EsOperacion()
+        {
+            return _tipoRegistro == TipoRegistro.Compra || _tipoRegistro == TipoRegistro.Venta;
+        }
+
+        private int AltoFormulario()
+        {
+            return EsOperacion() ? 390 : 315;
+        }
+    }
+}

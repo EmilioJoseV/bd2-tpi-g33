@@ -44,6 +44,21 @@ namespace TiendaIndumentaria.App
             return tabla;
         }
 
+        public static int EjecutarComando(
+            string sql,
+            params (string Nombre, object? Valor)[] parametros)
+        {
+            using (var conexion = new SqlConnection(CadenaConexion))
+            using (var comando = new SqlCommand(sql, conexion))
+            {
+                foreach (var (nombre, valor) in parametros)
+                    comando.Parameters.AddWithValue(nombre, valor ?? DBNull.Value);
+
+                conexion.Open();
+                return comando.ExecuteNonQuery();
+            }
+        }
+
         public static void ProbarConexion()
         {
             using (var conexion = new SqlConnection(CadenaConexion))
