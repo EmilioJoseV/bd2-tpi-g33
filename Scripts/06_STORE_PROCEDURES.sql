@@ -5,695 +5,1010 @@ IF OBJECT_ID(N'dbo.SP_Proveedor_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Registrar;
 GO
 
-CREATE PROCEDURE dbo.SP_Proveedor_Registrar
-    @RazonSocial varchar(150),
-    @CUIT        varchar(20),
-    @Email       varchar(150) = NULL,
-    @Telefono    varchar(30)  = NULL,
-    @Direccion   varchar(200) = NULL
+------------------------------------------------------------------------------------------------
+-- #3 - Registrar y administrar proveedores
+-- sp_registrarProveedor: da de alta un proveedor y valida que el CUIT no se repita.
+
+CREATE PROCEDURE sp_registrarProveedor
+    @RazonSocial VARCHAR(150),
+    @CUIT VARCHAR(20),
+    @Email VARCHAR(150),
+    @Telefono VARCHAR(30),
+    @Direccion VARCHAR(200)
 AS
 BEGIN
-    SET NOCOUNT ON;
+    -- Limpiar espacios en blanco de los campos de texto.
+    SET @RazonSocial = LTRIM(RTRIM(@RazonSocial));
+    SET @CUIT = LTRIM(RTRIM(@CUIT));
+    SET @Email = LTRIM(RTRIM(@Email));
+    SET @Telefono = LTRIM(RTRIM(@Telefono));
+    SET @Direccion = LTRIM(RTRIM(@Direccion));
+
+    -- Validar los datos obligatorios antes del insert.
+    IF @RazonSocial IS NULL OR @RazonSocial = ''
+    BEGIN
+        PRINT 'Falta la razon social.';
+        RETURN;
+    END
+
+    IF @CUIT IS NULL OR @CUIT = ''
+    BEGIN
+        PRINT 'Falta el CUIT.';
+        RETURN;
+    END
+
+    -- Si vino vacio en los opcionales, se guarda como NULL.
+    IF @Email = ''
+        SET @Email = NULL;
+
+    IF @Telefono = ''
+        SET @Telefono = NULL;
+
+    IF @Direccion = ''
+        SET @Direccion = NULL;
+
+    IF EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE UPPER(CUIT) = UPPER(@CUIT)
+    )
+    BEGIN
+        PRINT 'Ya existe un proveedor con ese CUIT.';
+        RETURN;
+    END
 
     IF LTRIM(RTRIM(ISNULL(@RazonSocial, ''))) = ''
         THROW 50001, 'La razon social es obligatoria.', 1;
 
-    IF LTRIM(RTRIM(ISNULL(@CUIT, ''))) = ''
-        THROW 50002, 'El CUIT es obligatorio.', 1;
-
-    IF EXISTS (SELECT 1 FROM Proveedores WHERE CUIT = LTRIM(RTRIM(@CUIT)))
-        THROW 50003, 'Ya existe un proveedor con ese CUIT.', 1;
-
-    BEGIN TRY
-        INSERT INTO Proveedores (RazonSocial, CUIT, Email, Telefono, Direccion, Activo)
-        VALUES (
-            LTRIM(RTRIM(@RazonSocial)),
-            LTRIM(RTRIM(@CUIT)),
-            NULLIF(LTRIM(RTRIM(@Email)), ''),
-            NULLIF(LTRIM(RTRIM(@Telefono)), ''),
-            NULLIF(LTRIM(RTRIM(@Direccion)), ''),
-            1
-        );
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50003, 'Ya existe un proveedor con ese CUIT.', 1;
-        ELSE
-            THROW;
-    END CATCH;
-
-    SELECT IdProveedor, RazonSocial, CUIT, Email, Telefono, Direccion, Activo
-    FROM Proveedores
-    WHERE IdProveedor = SCOPE_IDENTITY();
+    PRINT 'Proveedor registrado.';
 END;
 GO
 
+-- sp_actualizarProveedor: actualiza los datos principales de un proveedor existente.
 
--- SP_Proveedor_ActualizarContacto (Mantener sus datos de contacto: solo Email, Telefono y Direccion.)
-IF OBJECT_ID(N'dbo.SP_Proveedor_ActualizarContacto', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Proveedor_ActualizarContacto;
-GO
-
-CREATE PROCEDURE dbo.SP_Proveedor_ActualizarContacto
-    @IdProveedor int,
-    @Email       varchar(150) = NULL,
-    @Telefono    varchar(30)  = NULL,
-    @Direccion   varchar(200) = NULL
+CREATE PROCEDURE sp_actualizarProveedor
+    @IdProveedor INT,
+    @RazonSocial VARCHAR(150),
+    @CUIT VARCHAR(20),
+    @Email VARCHAR(150),
+    @Telefono VARCHAR(30),
+    @Direccion VARCHAR(200),
+    @Activo BIT
 AS
 BEGIN
-    SET NOCOUNT ON;
+    -- Limpiar espacios en blanco de los campos de texto.
+    SET @RazonSocial = LTRIM(RTRIM(@RazonSocial));
+    SET @CUIT = LTRIM(RTRIM(@CUIT));
+    SET @Email = LTRIM(RTRIM(@Email));
+    SET @Telefono = LTRIM(RTRIM(@Telefono));
+    SET @Direccion = LTRIM(RTRIM(@Direccion));
 
-    IF NOT EXISTS (SELECT 1 FROM Proveedores WHERE IdProveedor = @IdProveedor)
-        THROW 50004, 'El proveedor indicado no existe.', 1;
+    -- Validar que el id y los datos obligatorios vengan bien.
+    IF @IdProveedor IS NULL OR @IdProveedor <= 0
+    BEGIN
+        PRINT 'IdProveedor invalido.';
+        RETURN;
+    END
+
+    IF @RazonSocial IS NULL OR @RazonSocial = ''
+    BEGIN
+        PRINT 'Falta la razon social.';
+        RETURN;
+    END
+
+    IF @CUIT IS NULL OR @CUIT = ''
+    BEGIN
+        PRINT 'Falta el CUIT.';
+        RETURN;
+    END
+
+    IF @Email = ''
+        SET @Email = NULL;
+
+    IF @Telefono = ''
+        SET @Telefono = NULL;
+
+    IF @Direccion = ''
+        SET @Direccion = NULL;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+    )
+    BEGIN
+        PRINT 'No existe un proveedor con ese id.';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE UPPER(CUIT) = UPPER(@CUIT)
+          AND IdProveedor <> @IdProveedor
+    )
+    BEGIN
+        PRINT 'Ya existe otro proveedor con ese CUIT.';
+        RETURN;
+    END
 
     UPDATE Proveedores
-    SET Email     = NULLIF(LTRIM(RTRIM(@Email)), ''),
-        Telefono  = NULLIF(LTRIM(RTRIM(@Telefono)), ''),
-        Direccion = NULLIF(LTRIM(RTRIM(@Direccion)), '')
+    SET RazonSocial = @RazonSocial,
+        CUIT = @CUIT,
+        Email = @Email,
+        Telefono = @Telefono,
+        Direccion = @Direccion,
+        Activo = @Activo
     WHERE IdProveedor = @IdProveedor;
 
-    SELECT IdProveedor, RazonSocial, CUIT, Email, Telefono, Direccion, Activo
-    FROM Proveedores
-    WHERE IdProveedor = @IdProveedor;
+    PRINT 'Proveedor actualizado.';
 END;
 GO
 
+------------------------------------------------------------------------------------------------
+-- #5 - Registrar y administrar clientes
+-- sp_registrarCliente: da de alta un cliente y valida que el documento no se repita.
 
--- SP_Proveedor_Desactivar (Baja logica.)
-IF OBJECT_ID(N'dbo.SP_Proveedor_Desactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Proveedor_Desactivar;
-GO
-
-CREATE PROCEDURE dbo.SP_Proveedor_Desactivar
-    @IdProveedor int
+CREATE PROCEDURE sp_registrarCliente
+    @Apellido VARCHAR(100),
+    @Nombre VARCHAR(100),
+    @Documento VARCHAR(20),
+    @Email VARCHAR(150),
+    @Telefono VARCHAR(30)
 AS
 BEGIN
-    SET NOCOUNT ON;
+    -- Limpiar espacios en blanco de los campos de texto.
+    SET @Apellido = LTRIM(RTRIM(@Apellido));
+    SET @Nombre = LTRIM(RTRIM(@Nombre));
+    SET @Documento = LTRIM(RTRIM(@Documento));
+    SET @Email = LTRIM(RTRIM(@Email));
+    SET @Telefono = LTRIM(RTRIM(@Telefono));
 
-    IF NOT EXISTS (SELECT 1 FROM Proveedores WHERE IdProveedor = @IdProveedor)
-        THROW 50004, 'El proveedor indicado no existe.', 1;
+    IF @Apellido IS NULL OR @Apellido = ''
+    BEGIN
+        PRINT 'Falta el apellido';
+        RETURN;
+    END
 
-    UPDATE Proveedores
-    SET Activo = 0
-    WHERE IdProveedor = @IdProveedor;
+    IF @Nombre IS NULL OR @Nombre = ''
+    BEGIN
+        PRINT 'Falta el nombre';
+        RETURN;
+    END
 
-    SELECT IdProveedor, RazonSocial, CUIT, Email, Telefono, Direccion, Activo
-    FROM Proveedores
-    WHERE IdProveedor = @IdProveedor;
-END;
-GO
+    IF @Documento IS NULL OR @Documento = ''
+    BEGIN
+        PRINT 'Falta el documento';
+        RETURN;
+    END
 
+    IF @Email = ''
+        SET @Email = NULL;
 
--- SP_Proveedor_Reactivar (Reactivacion de un proveedor desactivado.)
-IF OBJECT_ID(N'dbo.SP_Proveedor_Reactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Proveedor_Reactivar;
-GO
- 
-CREATE PROCEDURE dbo.SP_Proveedor_Reactivar
-    @IdProveedor int
-AS
-BEGIN
-    SET NOCOUNT ON;
- 
-    IF NOT EXISTS (SELECT 1 FROM Proveedores WHERE IdProveedor = @IdProveedor)
-        THROW 50004, 'El proveedor indicado no existe.', 1;
- 
-    UPDATE Proveedores
-    SET Activo = 1
-    WHERE IdProveedor = @IdProveedor;
- 
-    SELECT IdProveedor, RazonSocial, CUIT, Email, Telefono, Direccion, Activo
-    FROM Proveedores
-    WHERE IdProveedor = @IdProveedor;
-END;
-GO
-
-
---#endregion 
-
---#region Empleados
-IF OBJECT_ID(N'dbo.SP_Empleado_Registrar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Empleado_Registrar;
-GO
- 
-CREATE PROCEDURE dbo.SP_Empleado_Registrar
-    @Apellido  varchar(100),
-    @Nombre    varchar(100),
-    @Documento varchar(20),
-    @Email     varchar(150) = NULL,
-    @Telefono  varchar(30)  = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
- 
-    IF LTRIM(RTRIM(ISNULL(@Apellido, ''))) = ''
-        THROW 50011, 'El apellido es obligatorio.', 1;
- 
-    IF LTRIM(RTRIM(ISNULL(@Nombre, ''))) = ''
-        THROW 50012, 'El nombre es obligatorio.', 1;
- 
-    IF LTRIM(RTRIM(ISNULL(@Documento, ''))) = ''
-        THROW 50013, 'El documento es obligatorio.', 1;
- 
-    IF EXISTS (SELECT 1 FROM Empleados WHERE Documento = LTRIM(RTRIM(@Documento)))
-        THROW 50014, 'Ya existe un empleado con ese documento.', 1;
- 
-    BEGIN TRY
-        INSERT INTO Empleados (Apellido, Nombre, Documento, Email, Telefono, Activo)
-        VALUES (
-            LTRIM(RTRIM(@Apellido)),
-            LTRIM(RTRIM(@Nombre)),
-            LTRIM(RTRIM(@Documento)),
-            NULLIF(LTRIM(RTRIM(@Email)), ''),
-            NULLIF(LTRIM(RTRIM(@Telefono)), ''),
-            1
-        );
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50014, 'Ya existe un empleado con ese documento.', 1;
-        ELSE
-            THROW;
-    END CATCH;
- 
-    SELECT IdEmpleado, Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo
-    FROM Empleados
-    WHERE IdEmpleado = SCOPE_IDENTITY();
-END;
-GO
- 
- 
-
--- SP_Empleado_Actualizar 
-IF OBJECT_ID(N'dbo.SP_Empleado_Actualizar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Empleado_Actualizar;
-GO
- 
-CREATE PROCEDURE dbo.SP_Empleado_Actualizar
-    @IdEmpleado int,
-    @Apellido   varchar(100),
-    @Nombre     varchar(100),
-    @Documento  varchar(20),
-    @Email      varchar(150) = NULL,
-    @Telefono   varchar(30)  = NULL,
-    @Activo     bit = 1
-AS
-BEGIN
-    SET NOCOUNT ON;
- 
-    IF NOT EXISTS (SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado)
-        THROW 50015, 'El empleado indicado no existe.', 1;
- 
-    IF LTRIM(RTRIM(ISNULL(@Apellido, ''))) = ''
-        THROW 50011, 'El apellido es obligatorio.', 1;
- 
-    IF LTRIM(RTRIM(ISNULL(@Nombre, ''))) = ''
-        THROW 50012, 'El nombre es obligatorio.', 1;
- 
-    IF LTRIM(RTRIM(ISNULL(@Documento, ''))) = ''
-        THROW 50013, 'El documento es obligatorio.', 1;
- 
-    IF EXISTS (
-        SELECT 1 FROM Empleados
-        WHERE Documento = LTRIM(RTRIM(@Documento))
-          AND IdEmpleado <> @IdEmpleado
-    )
-        THROW 50014, 'Ya existe otro empleado con ese documento.', 1;
- 
-    BEGIN TRY
-        UPDATE Empleados
-        SET Apellido  = LTRIM(RTRIM(@Apellido)),
-            Nombre    = LTRIM(RTRIM(@Nombre)),
-            Documento = LTRIM(RTRIM(@Documento)),
-            Email     = NULLIF(LTRIM(RTRIM(@Email)), ''),
-            Telefono  = NULLIF(LTRIM(RTRIM(@Telefono)), ''),
-            Activo    = @Activo
-        WHERE IdEmpleado = @IdEmpleado;
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50014, 'Ya existe otro empleado con ese documento.', 1;
-        ELSE
-            THROW;
-    END CATCH;
- 
-    SELECT IdEmpleado, Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo
-    FROM Empleados
-    WHERE IdEmpleado = @IdEmpleado;
-END;
-GO
- 
- 
--- SP_Empleado_Desactivar
-IF OBJECT_ID(N'dbo.SP_Empleado_Desactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Empleado_Desactivar;
-GO
- 
-CREATE PROCEDURE dbo.SP_Empleado_Desactivar
-    @IdEmpleado int
-AS
-BEGIN
-    SET NOCOUNT ON;
- 
-    IF NOT EXISTS (SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado)
-        THROW 50015, 'El empleado indicado no existe.', 1;
- 
-    UPDATE Empleados
-    SET Activo = 0
-    WHERE IdEmpleado = @IdEmpleado;
- 
-    SELECT IdEmpleado, Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo
-    FROM Empleados
-    WHERE IdEmpleado = @IdEmpleado;
-END;
-GO
-
--- SP_Empleado_Reactivar
-IF OBJECT_ID(N'dbo.SP_Empleado_Reactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Empleado_Reactivar;
-GO
- 
-CREATE PROCEDURE dbo.SP_Empleado_Reactivar
-    @IdEmpleado int
-AS
-BEGIN
-    SET NOCOUNT ON;
- 
-    IF NOT EXISTS (SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado)
-        THROW 50015, 'El empleado indicado no existe.', 1;
- 
-    UPDATE Empleados
-    SET Activo = 1
-    WHERE IdEmpleado = @IdEmpleado;
- 
-    SELECT IdEmpleado, Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo
-    FROM Empleados
-    WHERE IdEmpleado = @IdEmpleado;
-END;
-GO
-
-
--- SP_Talle_Registrar
-IF OBJECT_ID(N'dbo.SP_Talle_Registrar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Talle_Registrar;
-GO
-
-CREATE PROCEDURE dbo.SP_Talle_Registrar
-    @Nombre      varchar(20),
-    @Descripcion varchar(100) = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF LTRIM(RTRIM(ISNULL(@Nombre, ''))) = ''
-        THROW 50051, 'El nombre del talle es obligatorio.', 1;
-
-    IF EXISTS (SELECT 1 FROM Talles WHERE Nombre = LTRIM(RTRIM(@Nombre)))
-        THROW 50052, 'Ya existe un talle con ese nombre.', 1;
-
-    BEGIN TRY
-        INSERT INTO Talles (Nombre, Descripcion, Activo)
-        VALUES (
-            LTRIM(RTRIM(@Nombre)),
-            NULLIF(LTRIM(RTRIM(@Descripcion)), ''),
-            1
-        );
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50052, 'Ya existe un talle con ese nombre.', 1;
-        ELSE
-            THROW;
-    END CATCH;
-
-    SELECT IdTalle, Nombre, Descripcion, Activo
-    FROM Talles
-    WHERE IdTalle = SCOPE_IDENTITY();
-END;
-GO
-
-
--- SP_Talle_Actualizar
-IF OBJECT_ID(N'dbo.SP_Talle_Actualizar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Talle_Actualizar;
-GO
-
-CREATE PROCEDURE dbo.SP_Talle_Actualizar
-    @IdTalle     int,
-    @Nombre      varchar(20),
-    @Descripcion varchar(100) = NULL,
-    @Activo      bit = 1
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF NOT EXISTS (SELECT 1 FROM Talles WHERE IdTalle = @IdTalle)
-        THROW 50053, 'El talle indicado no existe.', 1;
-
-    IF LTRIM(RTRIM(ISNULL(@Nombre, ''))) = ''
-        THROW 50051, 'El nombre del talle es obligatorio.', 1;
+    IF @Telefono = ''
+        SET @Telefono = NULL;
 
     IF EXISTS (
-        SELECT 1 FROM Talles
-        WHERE Nombre = LTRIM(RTRIM(@Nombre))
-          AND IdTalle <> @IdTalle
+        SELECT 1
+        FROM Clientes
+        WHERE UPPER(Documento) = UPPER(@Documento)
     )
-        THROW 50052, 'Ya existe otro talle con ese nombre.', 1;
+    BEGIN
+        PRINT 'Ya existe un cliente con ese documento';
+        RETURN;
+    END
 
-    BEGIN TRY
-        UPDATE Talles
-        SET Nombre      = LTRIM(RTRIM(@Nombre)),
-            Descripcion = NULLIF(LTRIM(RTRIM(@Descripcion)), ''),
-            Activo      = @Activo
-        WHERE IdTalle = @IdTalle;
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50052, 'Ya existe otro talle con ese nombre.', 1;
-        ELSE
-            THROW;
-    END CATCH;
+    INSERT INTO Clientes (Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo)
+    VALUES (@Apellido, @Nombre, @Documento, @Email, @Telefono, GETDATE(), 1);
 
-    SELECT IdTalle, Nombre, Descripcion, Activo
-    FROM Talles
-    WHERE IdTalle = @IdTalle;
+    PRINT 'Cliente registrado';
 END;
 GO
 
+-- sp_actualizarCliente: actualiza los datos principales de un cliente existente.
 
--- SP_Talle_Desactivar
-IF OBJECT_ID(N'dbo.SP_Talle_Desactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Talle_Desactivar;
-GO
-
-CREATE PROCEDURE dbo.SP_Talle_Desactivar
-    @IdTalle int
+CREATE PROCEDURE sp_actualizarCliente
+    @IdCliente INT,
+    @Apellido VARCHAR(100),
+    @Nombre VARCHAR(100),
+    @Documento VARCHAR(20),
+    @Email VARCHAR(150),
+    @Telefono VARCHAR(30),
+    @Activo BIT
 AS
 BEGIN
-    SET NOCOUNT ON;
+    -- Limpiar espacios en blanco de los campos de texto.
+    SET @Apellido = LTRIM(RTRIM(@Apellido));
+    SET @Nombre = LTRIM(RTRIM(@Nombre));
+    SET @Documento = LTRIM(RTRIM(@Documento));
+    SET @Email = LTRIM(RTRIM(@Email));
+    SET @Telefono = LTRIM(RTRIM(@Telefono));
 
-    IF NOT EXISTS (SELECT 1 FROM Talles WHERE IdTalle = @IdTalle)
-        THROW 50053, 'El talle indicado no existe.', 1;
+    IF @IdCliente IS NULL OR @IdCliente <= 0
+    BEGIN
+        PRINT 'IdCliente invalido';
+        RETURN;
+    END
 
-    UPDATE Talles
-    SET Activo = 0
-    WHERE IdTalle = @IdTalle;
+    IF @Apellido IS NULL OR @Apellido = ''
+    BEGIN
+        PRINT 'Falta el apellido';
+        RETURN;
+    END
 
-    SELECT IdTalle, Nombre, Descripcion, Activo
-    FROM Talles
-    WHERE IdTalle = @IdTalle;
-END;
-GO
+    IF @Nombre IS NULL OR @Nombre = ''
+    BEGIN
+        PRINT 'Falta el nombre';
+        RETURN;
+    END
 
+    IF @Documento IS NULL OR @Documento = ''
+    BEGIN
+        PRINT 'Falta el documento';
+        RETURN;
+    END
 
--- SP_Talle_Reactivar
-IF OBJECT_ID(N'dbo.SP_Talle_Reactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Talle_Reactivar;
-GO
+    IF @Email = ''
+        SET @Email = NULL;
 
-CREATE PROCEDURE dbo.SP_Talle_Reactivar
-    @IdTalle int
-AS
-BEGIN
-    SET NOCOUNT ON;
+    IF @Telefono = ''
+        SET @Telefono = NULL;
 
-    IF NOT EXISTS (SELECT 1 FROM Talles WHERE IdTalle = @IdTalle)
-        THROW 50053, 'El talle indicado no existe.', 1;
-
-    UPDATE Talles
-    SET Activo = 1
-    WHERE IdTalle = @IdTalle;
-
-    SELECT IdTalle, Nombre, Descripcion, Activo
-    FROM Talles
-    WHERE IdTalle = @IdTalle;
-END;
-GO
-
-
--- SP_Marca_Registrar
-IF OBJECT_ID(N'dbo.SP_Marca_Registrar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Marca_Registrar;
-GO
-
-CREATE PROCEDURE dbo.SP_Marca_Registrar
-    @Nombre      varchar(100),
-    @Descripcion varchar(255) = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF LTRIM(RTRIM(ISNULL(@Nombre, ''))) = ''
-        THROW 50021, 'El nombre de la marca es obligatorio.', 1;
-
-    IF EXISTS (SELECT 1 FROM Marcas WHERE Nombre = LTRIM(RTRIM(@Nombre)))
-        THROW 50022, 'Ya existe una marca con ese nombre.', 1;
-
-    BEGIN TRY
-        INSERT INTO Marcas (Nombre, Descripcion, Activo)
-        VALUES (
-            LTRIM(RTRIM(@Nombre)),
-            NULLIF(LTRIM(RTRIM(@Descripcion)), ''),
-            1
-        );
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50022, 'Ya existe una marca con ese nombre.', 1;
-        ELSE
-            THROW;
-    END CATCH;
-
-    SELECT IdMarca, Nombre, Descripcion, Activo
-    FROM Marcas
-    WHERE IdMarca = SCOPE_IDENTITY();
-END;
-GO
-
-
--- SP_Marca_Actualizar
-IF OBJECT_ID(N'dbo.SP_Marca_Actualizar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Marca_Actualizar;
-GO
-
-CREATE PROCEDURE dbo.SP_Marca_Actualizar
-    @IdMarca     int,
-    @Nombre      varchar(100),
-    @Descripcion varchar(255) = NULL,
-    @Activo      bit = 1
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF NOT EXISTS (SELECT 1 FROM Marcas WHERE IdMarca = @IdMarca)
-        THROW 50023, 'La marca indicada no existe.', 1;
-
-    IF LTRIM(RTRIM(ISNULL(@Nombre, ''))) = ''
-        THROW 50021, 'El nombre de la marca es obligatorio.', 1;
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Clientes
+        WHERE IdCliente = @IdCliente
+    )
+    BEGIN
+        PRINT 'No existe un cliente con ese id';
+        RETURN;
+    END
 
     IF EXISTS (
-        SELECT 1 FROM Marcas
-        WHERE Nombre = LTRIM(RTRIM(@Nombre))
-          AND IdMarca <> @IdMarca
+        SELECT 1
+        FROM Clientes
+        WHERE UPPER(Documento) = UPPER(@Documento)
+          AND IdCliente <> @IdCliente
     )
-        THROW 50022, 'Ya existe otra marca con ese nombre.', 1;
+    BEGIN
+        PRINT 'Ya existe otro cliente con ese documento';
+        RETURN;
+    END
 
-    BEGIN TRY
-        UPDATE Marcas
-        SET Nombre      = LTRIM(RTRIM(@Nombre)),
-            Descripcion = NULLIF(LTRIM(RTRIM(@Descripcion)), ''),
-            Activo      = @Activo
-        WHERE IdMarca = @IdMarca;
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50022, 'Ya existe otra marca con ese nombre.', 1;
-        ELSE
-            THROW;
-    END CATCH;
+    UPDATE Clientes
+    SET Apellido = @Apellido,
+        Nombre = @Nombre,
+        Documento = @Documento,
+        Email = @Email,
+        Telefono = @Telefono,
+        Activo = @Activo
+    WHERE IdCliente = @IdCliente;
 
-    SELECT IdMarca, Nombre, Descripcion, Activo
-    FROM Marcas
-    WHERE IdMarca = @IdMarca;
+    PRINT 'Cliente actualizado';
 END;
 GO
 
+------------------------------------------------------------------------------------------------
+-- #7 - Registrar compras de mercadería realizadas a proveedores
+-- sp_registrarCompra: registra una compra validando bien los datos de entrada.
 
--- SP_Marca_Desactivar
-IF OBJECT_ID(N'dbo.SP_Marca_Desactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Marca_Desactivar;
-GO
-
-CREATE PROCEDURE dbo.SP_Marca_Desactivar
-    @IdMarca int
+CREATE PROCEDURE sp_registrarCompra
+    @IdProveedor INT,
+    @IdEmpleado INT,
+    @NumeroComprobante VARCHAR(50),
+    @Total DECIMAL(12,2)
 AS
 BEGIN
-    SET NOCOUNT ON;
+    DECLARE @IdEstadoPendiente INT;
 
-    IF NOT EXISTS (SELECT 1 FROM Marcas WHERE IdMarca = @IdMarca)
-        THROW 50023, 'La marca indicada no existe.', 1;
+-- Limpiar espacios en blanco del numero de comprobante
+    SET @NumeroComprobante = LTRIM(RTRIM(@NumeroComprobante));
 
-    UPDATE Marcas
-    SET Activo = 0
-    WHERE IdMarca = @IdMarca;
+    IF @IdProveedor IS NULL OR @IdProveedor <= 0
+    BEGIN
+        PRINT 'El proveedor es invalido';
+        RETURN;
+    END
 
-    SELECT IdMarca, Nombre, Descripcion, Activo
-    FROM Marcas
-    WHERE IdMarca = @IdMarca;
-END;
-GO
+    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
+    BEGIN
+        PRINT 'El empleado es invalido';
+        RETURN;
+    END
 
-
--- SP_Marca_Reactivar
-IF OBJECT_ID(N'dbo.SP_Marca_Reactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Marca_Reactivar;
-GO
-
-CREATE PROCEDURE dbo.SP_Marca_Reactivar
-    @IdMarca int
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF NOT EXISTS (SELECT 1 FROM Marcas WHERE IdMarca = @IdMarca)
-        THROW 50023, 'La marca indicada no existe.', 1;
-
-    UPDATE Marcas
-    SET Activo = 1
-    WHERE IdMarca = @IdMarca;
-
-    SELECT IdMarca, Nombre, Descripcion, Activo
-    FROM Marcas
-    WHERE IdMarca = @IdMarca;
-END;
-GO
-
--- SP_Color_Registrar
-IF OBJECT_ID(N'dbo.SP_Color_Registrar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Color_Registrar;
-GO
-
-CREATE PROCEDURE dbo.SP_Color_Registrar
-    @Nombre varchar(50)
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF LTRIM(RTRIM(ISNULL(@Nombre, ''))) = ''
-        THROW 50031, 'El nombre del color es obligatorio.', 1;
-
-    IF EXISTS (SELECT 1 FROM Colores WHERE Nombre = LTRIM(RTRIM(@Nombre)))
-        THROW 50032, 'Ya existe un color con ese nombre.', 1;
-
-    BEGIN TRY
-        INSERT INTO Colores (Nombre, Activo)
-        VALUES (LTRIM(RTRIM(@Nombre)), 1);
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50032, 'Ya existe un color con ese nombre.', 1;
-        ELSE
-            THROW;
-    END CATCH;
-
-    SELECT IdColor, Nombre, Activo
-    FROM Colores
-    WHERE IdColor = SCOPE_IDENTITY();
-END;
-GO
-
-
--- SP_Color_Actualizar
-IF OBJECT_ID(N'dbo.SP_Color_Actualizar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Color_Actualizar;
-GO
-
-CREATE PROCEDURE dbo.SP_Color_Actualizar
-    @IdColor int,
-    @Nombre  varchar(50),
-    @Activo  bit = 1
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF NOT EXISTS (SELECT 1 FROM Colores WHERE IdColor = @IdColor)
-        THROW 50033, 'El color indicado no existe.', 1;
-
-    IF LTRIM(RTRIM(ISNULL(@Nombre, ''))) = ''
-        THROW 50031, 'El nombre del color es obligatorio.', 1;
+    IF @Total IS NULL OR @Total < 0
+    BEGIN
+        PRINT 'El total es invalido';
+        RETURN;
+    END
+    
+-- Validar existencia y datos de los registros relacionados.
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+    )
+    BEGIN
+        PRINT 'No existe un proveedor con ese id';
+        RETURN;
+    END
 
     IF EXISTS (
-        SELECT 1 FROM Colores
-        WHERE Nombre = LTRIM(RTRIM(@Nombre))
-          AND IdColor <> @IdColor
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+          AND Activo = 0
     )
-        THROW 50032, 'Ya existe otro color con ese nombre.', 1;
+    BEGIN
+        PRINT 'El proveedor no esta activo';
+        RETURN;
+    END
 
-    BEGIN TRY
-        UPDATE Colores
-        SET Nombre = LTRIM(RTRIM(@Nombre)),
-            Activo = @Activo
-        WHERE IdColor = @IdColor;
-    END TRY
-    BEGIN CATCH
-        IF ERROR_NUMBER() IN (2601, 2627)
-            THROW 50032, 'Ya existe otro color con ese nombre.', 1;
-        ELSE
-            THROW;
-    END CATCH;
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+    )
+    BEGIN
+        PRINT 'No existe un empleado con ese id';
+        RETURN;
+    END
 
-    SELECT IdColor, Nombre, Activo
-    FROM Colores
-    WHERE IdColor = @IdColor;
+    IF EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El empleado no esta activo';
+        RETURN;
+    END
+
+-- Iniciamos la compra siempre con estado pendiente, por lo que buscamos el id de ese estado para asignarlo a la compra. 
+-- Si no existe el estado pendiente, se muestra un mensaje de error y se cancela el registro de la compra.
+    SELECT @IdEstadoPendiente = IdEstadoCompra
+    FROM EstadosCompra
+    WHERE UPPER(Nombre) = 'PENDIENTE';
+
+    IF @IdEstadoPendiente IS NULL
+    BEGIN
+        PRINT 'No existe el estado pendiente registrado en la bd';
+        RETURN;
+    END
+
+    IF @NumeroComprobante = ''
+        SET @NumeroComprobante = NULL;
+
+-- Registrar la compra arrancando siempre en pendiente.
+    INSERT INTO Compras (IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total)
+    VALUES (@IdProveedor, @IdEmpleado, @IdEstadoPendiente, SYSDATETIME(), @NumeroComprobante, @Total);
+
+    PRINT 'Compra registrada';
 END;
 GO
 
+-- sp_actualizarCompra: actualiza los datos principales de una compra existente.
 
--- SP_Color_Desactivar
-IF OBJECT_ID(N'dbo.SP_Color_Desactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Color_Desactivar;
-GO
-
-CREATE PROCEDURE dbo.SP_Color_Desactivar
-    @IdColor int
+CREATE PROCEDURE sp_actualizarCompra
+    @IdCompra INT,
+    @IdProveedor INT,
+    @IdEmpleado INT,
+    @IdEstadoCompra INT,
+    @NumeroComprobante VARCHAR(50),
+    @Total DECIMAL(12,2)
 AS
 BEGIN
-    SET NOCOUNT ON;
+-- Limpiar espacios en blanco del numero de comprobante
+    SET @NumeroComprobante = LTRIM(RTRIM(@NumeroComprobante));
 
-    IF NOT EXISTS (SELECT 1 FROM Colores WHERE IdColor = @IdColor)
-        THROW 50033, 'El color indicado no existe.', 1;
+-- Validar datos ingresados para la actualizacion de la compra.
+    IF @IdCompra IS NULL OR @IdCompra <= 0
+    BEGIN
+        PRINT 'El id de la compra es invalido';
+        RETURN;
+    END
 
-    UPDATE Colores
-    SET Activo = 0
-    WHERE IdColor = @IdColor;
+    IF @IdProveedor IS NULL OR @IdProveedor <= 0
+    BEGIN
+        PRINT 'El proveedor es invalido';
+        RETURN;
+    END
 
-    SELECT IdColor, Nombre, Activo
-    FROM Colores
-    WHERE IdColor = @IdColor;
+    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
+    BEGIN
+        PRINT 'El empleado es invalido';
+        RETURN;
+    END
+
+    IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
+    BEGIN
+        PRINT 'El estado de la compra es invalido';
+        RETURN;
+    END
+
+    IF @Total IS NULL OR @Total < 0
+    BEGIN
+        PRINT 'El total es invalido';
+        RETURN;
+    END
+
+-- Validar existencia y datos de los registros relacionados.
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Compras
+        WHERE IdCompra = @IdCompra
+    )
+    BEGIN
+        PRINT 'No existe una compra con ese id';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+    )
+    BEGIN
+        PRINT 'No existe un proveedor con ese id';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El proveedor no esta activo';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+    )
+    BEGIN
+        PRINT 'No existe un empleado con ese id';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El empleado no esta activo';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM EstadosCompra
+        WHERE IdEstadoCompra = @IdEstadoCompra
+    )
+    BEGIN
+        PRINT 'No existe un estado de compra con ese id';
+        RETURN;
+    END
+
+    IF @NumeroComprobante = ''
+        SET @NumeroComprobante = NULL;
+
+    IF EXISTS (
+        SELECT 1
+        FROM EstadosCompra
+        WHERE IdEstadoCompra = @IdEstadoCompra
+          AND UPPER(Nombre) = 'CONFIRMADA'
+    )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM DetalleCompras
+        WHERE IdCompra = @IdCompra
+    )
+    BEGIN
+        PRINT 'No se puede confirmar una compra sin detalle';
+        RETURN;
+    END
+
+-- Actualizar la compra con los nuevos datos ingresados.
+    UPDATE Compras
+    SET IdProveedor = @IdProveedor,
+        IdEmpleado = @IdEmpleado,
+        IdEstadoCompra = @IdEstadoCompra,
+        NumeroComprobante = @NumeroComprobante,
+        Total = @Total
+    WHERE IdCompra = @IdCompra;
+
+    PRINT 'Compra actualizada';
 END;
 GO
 
+------------------------------------------------------------------------------------------------
+-- #9 - Detallar los productos incluidos en cada compra y cada venta, indicando cantidad, precio unitario y subtotal
+-- sp_registrarDetalleCompra: agrega un registro de detalle a una compra.
 
--- SP_Color_Reactivar
-IF OBJECT_ID(N'dbo.SP_Color_Reactivar', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Color_Reactivar;
-GO
-
-CREATE PROCEDURE dbo.SP_Color_Reactivar
-    @IdColor int
+CREATE PROCEDURE sp_registrarDetalleCompra
+    @IdCompra INT,
+    @IdProducto INT,
+    @Cantidad INT,
+    @PrecioUnitario DECIMAL(12,2)
 AS
 BEGIN
-    SET NOCOUNT ON;
+    DECLARE @Subtotal DECIMAL(12,2);
 
-    IF NOT EXISTS (SELECT 1 FROM Colores WHERE IdColor = @IdColor)
-        THROW 50033, 'El color indicado no existe.', 1;
+    IF @IdCompra IS NULL OR @IdCompra <= 0
+    BEGIN
+        PRINT 'El id de compra es invalido';
+        RETURN;
+    END
 
-    UPDATE Colores
-    SET Activo = 1
-    WHERE IdColor = @IdColor;
+    IF @IdProducto IS NULL OR @IdProducto <= 0
+    BEGIN
+        PRINT 'El id de producto es invalido';
+        RETURN;
+    END
 
-    SELECT IdColor, Nombre, Activo
-    FROM Colores
-    WHERE IdColor = @IdColor;
+    IF @Cantidad IS NULL OR @Cantidad <= 0
+    BEGIN
+        PRINT 'La cantidad es invalida';
+        RETURN;
+    END
+
+    IF @PrecioUnitario IS NULL OR @PrecioUnitario < 0
+    BEGIN
+        PRINT 'El precio unitario es invalido';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Compras
+        WHERE IdCompra = @IdCompra
+    )
+    BEGIN
+        PRINT 'No existe una compra con ese id';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+    )
+    BEGIN
+        PRINT 'No existe un producto con ese id';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Compras c
+        INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+        WHERE c.IdCompra = @IdCompra
+          AND UPPER(ec.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una compra confirmada';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El producto no esta activo';
+        RETURN;
+    END
+
+    SET @Subtotal = @Cantidad * @PrecioUnitario;
+
+    INSERT INTO DetalleCompras (IdCompra, IdProducto, Cantidad, PrecioUnitario, Subtotal)
+    VALUES (@IdCompra, @IdProducto, @Cantidad, @PrecioUnitario, @Subtotal);
+
+    PRINT 'Detalle de compra registrado';
+END;
+GO
+
+-- sp_actualizarDetalleCompra: actualiza una linea de detalle de compra.
+
+CREATE PROCEDURE sp_actualizarDetalleCompra
+    @IdDetalleCompra INT,
+    @IdProducto INT,
+    @Cantidad INT,
+    @PrecioUnitario DECIMAL(12,2)
+AS
+BEGIN
+    DECLARE @Subtotal DECIMAL(12,2);
+    DECLARE @IdCompra INT;
+
+    IF @IdDetalleCompra IS NULL OR @IdDetalleCompra <= 0
+    BEGIN
+        PRINT 'El id de detalle de compra es invalido';
+        RETURN;
+    END
+
+    IF @IdProducto IS NULL OR @IdProducto <= 0
+    BEGIN
+        PRINT 'El id de producto es invalido';
+        RETURN;
+    END
+
+    IF @Cantidad IS NULL OR @Cantidad <= 0
+    BEGIN
+        PRINT 'La cantidad es invalida';
+        RETURN;
+    END
+
+    IF @PrecioUnitario IS NULL OR @PrecioUnitario < 0
+    BEGIN
+        PRINT 'El precio unitario es invalido';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM DetalleCompras
+        WHERE IdDetalleCompra = @IdDetalleCompra
+    )
+    BEGIN
+        PRINT 'No existe un detalle de compra con ese id';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+    )
+    BEGIN
+        PRINT 'No existe un producto con ese id';
+        RETURN;
+    END
+
+    SELECT @IdCompra = IdCompra
+    FROM DetalleCompras
+    WHERE IdDetalleCompra = @IdDetalleCompra;
+
+-- Valiamdos que la compra no este confirmada, ya que no se puede modificar el detalle de una compra confirmada.
+    IF EXISTS (
+        SELECT 1
+        FROM Compras c
+        INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+        WHERE c.IdCompra = @IdCompra
+          AND UPPER(ec.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una compra confirmada';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El producto no esta activo';
+        RETURN;
+    END
+
+    SET @Subtotal = @Cantidad * @PrecioUnitario;
+
+    UPDATE DetalleCompras
+    SET IdProducto = @IdProducto,
+        Cantidad = @Cantidad,
+        PrecioUnitario = @PrecioUnitario,
+        Subtotal = @Subtotal
+    WHERE IdDetalleCompra = @IdDetalleCompra;
+
+    PRINT 'Detalle de compra actualizado';
+END;
+GO
+
+-- sp_eliminarDetalleCompra: elimina una linea de detalle de compra.
+
+CREATE PROCEDURE sp_eliminarDetalleCompra
+    @IdDetalleCompra INT
+AS
+BEGIN
+    DECLARE @IdCompra INT;
+
+    IF @IdDetalleCompra IS NULL OR @IdDetalleCompra <= 0
+    BEGIN
+        PRINT 'El id de detalle de compra es invalido';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM DetalleCompras
+        WHERE IdDetalleCompra = @IdDetalleCompra
+    )
+    BEGIN
+        PRINT 'No existe un detalle de compra con ese id';
+        RETURN;
+    END
+
+    SELECT @IdCompra = IdCompra
+    FROM DetalleCompras
+    WHERE IdDetalleCompra = @IdDetalleCompra;
+
+-- Validamos que la compra no este confirmada, ya que no se puede modificar el detalle de una compra confirmada.
+    IF EXISTS (
+        SELECT 1
+        FROM Compras c
+        INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+        WHERE c.IdCompra = @IdCompra
+          AND UPPER(ec.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una compra confirmada';
+        RETURN;
+    END
+
+    DELETE FROM DetalleCompras
+    WHERE IdDetalleCompra = @IdDetalleCompra;
+
+    PRINT 'Detalle de compra eliminado';
+END;
+GO
+
+-- sp_registrarDetalleVenta: agrega un registro de detalle a una venta.
+
+CREATE PROCEDURE sp_registrarDetalleVenta
+    @IdVenta INT,
+    @IdProducto INT,
+    @Cantidad INT
+AS
+BEGIN
+    DECLARE @PrecioUnitario DECIMAL(12,2);
+    DECLARE @Subtotal DECIMAL(12,2);
+
+    IF @IdVenta IS NULL OR @IdVenta <= 0
+    BEGIN
+        PRINT 'El id de venta es invalido';
+        RETURN;
+    END
+
+    IF @IdProducto IS NULL OR @IdProducto <= 0
+    BEGIN
+        PRINT 'El id de producto es invalido';
+        RETURN;
+    END
+
+    IF @Cantidad IS NULL OR @Cantidad <= 0
+    BEGIN
+        PRINT 'La cantidad es invalida';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Ventas
+        WHERE IdVenta = @IdVenta
+    )
+    BEGIN
+        PRINT 'No existe una venta con ese id';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+    )
+    BEGIN
+        PRINT 'No existe un producto con ese id';
+        RETURN;
+    END
+
+-- Validamos que la venta no este confirmada, ya que no se puede modificar el detalle de una venta confirmada.
+    IF EXISTS (
+        SELECT 1
+        FROM Ventas v
+        INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta
+        WHERE v.IdVenta = @IdVenta
+          AND UPPER(ev.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una venta confirmada';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El producto no esta activo';
+        RETURN;
+    END
+
+    SELECT @PrecioUnitario = PrecioVenta
+    FROM Productos
+    WHERE IdProducto = @IdProducto;
+
+    SET @Subtotal = @Cantidad * @PrecioUnitario;
+
+    INSERT INTO DetalleVentas (IdVenta, IdProducto, Cantidad, PrecioUnitario, Subtotal)
+    VALUES (@IdVenta, @IdProducto, @Cantidad, @PrecioUnitario, @Subtotal);
+
+    UPDATE Ventas
+    SET Total = ISNULL((
+        SELECT SUM(dv.Subtotal)
+        FROM DetalleVentas dv
+        WHERE dv.IdVenta = @IdVenta
+    ), 0)
+    WHERE IdVenta = @IdVenta;
+
+    PRINT 'Detalle de venta registrado';
+END;
+GO
+
+-- sp_actualizarDetalleVenta: actualiza un registro de detalle de venta.
+
+CREATE PROCEDURE sp_actualizarDetalleVenta
+    @IdDetalleVenta INT,
+    @IdProducto INT,
+    @Cantidad INT
+AS
+BEGIN
+    DECLARE @PrecioUnitario DECIMAL(12,2);
+    DECLARE @Subtotal DECIMAL(12,2);
+    DECLARE @IdVenta INT;
+
+    IF @IdDetalleVenta IS NULL OR @IdDetalleVenta <= 0
+    BEGIN
+        PRINT 'El id de detalle de venta es invalido';
+        RETURN;
+    END
+
+    IF @IdProducto IS NULL OR @IdProducto <= 0
+    BEGIN
+        PRINT 'El id de producto es invalido';
+        RETURN;
+    END
+
+    IF @Cantidad IS NULL OR @Cantidad <= 0
+    BEGIN
+        PRINT 'La cantidad es invalida';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM DetalleVentas
+        WHERE IdDetalleVenta = @IdDetalleVenta
+    )
+    BEGIN
+        PRINT 'No existe un detalle de venta con ese id';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+    )
+    BEGIN
+        PRINT 'No existe un producto con ese id';
+        RETURN;
+    END
+
+    SELECT @IdVenta = IdVenta
+    FROM DetalleVentas
+    WHERE IdDetalleVenta = @IdDetalleVenta;
+
+    IF EXISTS (
+        SELECT 1
+        FROM Ventas v
+        INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta
+        WHERE v.IdVenta = @IdVenta
+          AND UPPER(ev.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una venta confirmada';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El producto no esta activo';
+        RETURN;
+    END
+
+    SELECT @PrecioUnitario = PrecioVenta
+    FROM Productos
+    WHERE IdProducto = @IdProducto;
+
+    SET @Subtotal = @Cantidad * @PrecioUnitario;
+
+    UPDATE DetalleVentas
+    SET IdProducto = @IdProducto,
+        Cantidad = @Cantidad,
+        PrecioUnitario = @PrecioUnitario,
+        Subtotal = @Subtotal
+    WHERE IdDetalleVenta = @IdDetalleVenta;
+
+    UPDATE Ventas
+    SET Total = ISNULL((
+        SELECT SUM(dv.Subtotal)
+        FROM DetalleVentas dv
+        WHERE dv.IdVenta = @IdVenta
+    ), 0)
+    WHERE IdVenta = @IdVenta;
+
+    PRINT 'Detalle de venta actualizado';
+END;
+GO
+
+-- sp_eliminarDetalleVenta: elimina una linea de detalle de venta.
+
+CREATE PROCEDURE sp_eliminarDetalleVenta
+    @IdDetalleVenta INT
+AS
+BEGIN
+    DECLARE @IdVenta INT;
+
+    IF @IdDetalleVenta IS NULL OR @IdDetalleVenta <= 0
+    BEGIN
+        PRINT 'El id de detalle de venta es invalido';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM DetalleVentas
+        WHERE IdDetalleVenta = @IdDetalleVenta
+    )
+    BEGIN
+        PRINT 'No existe un detalle de venta con ese id';
+        RETURN;
+    END
+
+    SELECT @IdVenta = IdVenta
+    FROM DetalleVentas
+    WHERE IdDetalleVenta = @IdDetalleVenta;
+
+    IF EXISTS (
+        SELECT 1
+        FROM Ventas v
+        INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta
+        WHERE v.IdVenta = @IdVenta
+          AND UPPER(ev.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una venta confirmada';
+        RETURN;
+    END
+
+    DELETE FROM DetalleVentas
+    WHERE IdDetalleVenta = @IdDetalleVenta;
+
+    UPDATE Ventas
+    SET Total = ISNULL((
+        SELECT SUM(dv.Subtotal)
+        FROM DetalleVentas dv
+        WHERE dv.IdVenta = @IdVenta
+    ), 0)
+    WHERE IdVenta = @IdVenta;
+
+    PRINT 'Detalle de venta eliminado';
 END;
 GO
