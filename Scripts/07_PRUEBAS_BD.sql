@@ -74,3 +74,31 @@ FROM Proveedores
 WHERE CUIT = '30-12345678-3';
 ------------------------------------------------------------------------------------------------
 GO
+
+------------------------------------------------------------------------------------------------
+-- #5 - Registrar clientes para asociarlos a las ventas realizadas
+
+-- Prueba de registro de cliente nuevo.
+EXEC sp_registrarCliente
+    @Apellido = 'Doe Gomez',
+    @Nombre = 'John Alexander',
+    @Documento = '12345678',
+    @Email = 'johndoegomez@email.com',
+    @Telefono = '1155667788';
+GO
+
+-- Prueba de validacion de documento repetido.
+EXEC sp_registrarCliente
+    @Apellido = 'Polo',
+    @Nombre = 'Marco',
+    @Documento = '12345678',
+    @Email = 'marcopolo@email.com',
+    @Telefono = '1166778899';
+GO
+
+-- Consulta para verificar los datos del cliente
+SELECT IdCliente, Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo
+FROM Clientes
+WHERE Documento = '12345678';
+------------------------------------------------------------------------------------------------
+GO

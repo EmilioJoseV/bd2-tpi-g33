@@ -55,7 +55,36 @@ BEGIN
         Direccion = @Direccion
     WHERE IdProveedor = @IdProveedor;
 
-    PRINT 'Datos de contacto actualizados correctamente.';
+PRINT 'Datos de contacto actualizados correctamente.';
+END;
+GO
+
+------------------------------------------------------------------------------------------------
+-- #5 - Registrar clientes para asociarlos a las ventas realizadas
+-- sp_registrarCliente: registra un nuevo cliente el numero de documento
+
+CREATE PROCEDURE sp_registrarCliente
+    @Apellido VARCHAR(100),
+    @Nombre VARCHAR(100),
+    @Documento VARCHAR(20),
+    @Email VARCHAR(150),
+    @Telefono VARCHAR(30)
+AS
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM Clientes
+        WHERE Documento = @Documento
+    )
+    BEGIN
+        PRINT 'Ya existe un cliente registrado con ese documento';
+        RETURN;
+    END
+
+    INSERT INTO Clientes (Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo)
+    VALUES (@Apellido, @Nombre, @Documento, @Email, @Telefono, GETDATE(), 1);
+
+    PRINT 'Cliente registrado correctamente';
 END;
 GO
 ------------------------------------------------------------------------------------------------
