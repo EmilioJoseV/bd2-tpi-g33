@@ -143,20 +143,47 @@ namespace TiendaIndumentaria.App
             if (soloLectura)
                 texto.BackColor = SystemColors.Control;
 
-            contenedor.Controls.Add(new Label
-            {
-                Text = etiqueta,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false,
-                Margin = new Padding(0, 0, 8, 0)
-            }, 0, fila);
+            contenedor.Controls.Add(CrearEtiquetaCampo(etiqueta, EsCampoObligatorio(clave)), 0, fila);
 
             contenedor.Controls.Add(texto, 1, fila);
             _campos[clave] = texto;
 
             if (clave == "Total")
                 _textoTotal = texto;
+        }
+
+        private static Control CrearEtiquetaCampo(string etiqueta, bool obligatorio)
+        {
+            var panel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoSize = false,
+                Padding = new Padding(0, 9, 0, 0),
+                Margin = new Padding(0, 0, 8, 0)
+            };
+
+            panel.Controls.Add(new Label
+            {
+                Text = etiqueta,
+                AutoSize = true,
+                Margin = new Padding(0, 0, 2, 0)
+            });
+
+            if (obligatorio)
+            {
+                panel.Controls.Add(new Label
+                {
+                    Text = "*",
+                    ForeColor = Color.Red,
+                    Font = new Font(SystemFonts.DefaultFont, FontStyle.Bold),
+                    AutoSize = true,
+                    Margin = new Padding(0)
+                });
+            }
+
+            return panel;
         }
 
         private void CargarValoresIniciales()
@@ -458,12 +485,7 @@ namespace TiendaIndumentaria.App
         {
             foreach ((string clave, TextBox texto) in _campos)
             {
-                if (clave == "Comprobante" ||
-                    clave == "Descripcion" ||
-                    clave == "Email" ||
-                    clave == "Telefono" ||
-                    clave == "Direccion" ||
-                    clave == "Total")
+                if (!EsCampoObligatorio(clave))
                     continue;
 
                 if (string.IsNullOrWhiteSpace(texto.Text))
@@ -489,6 +511,16 @@ namespace TiendaIndumentaria.App
             }
 
             return true;
+        }
+
+        private static bool EsCampoObligatorio(string clave)
+        {
+            return clave != "Comprobante" &&
+                clave != "Descripcion" &&
+                clave != "Email" &&
+                clave != "Telefono" &&
+                clave != "Direccion" &&
+                clave != "Total";
         }
 
         private void ActualizarTotal()
