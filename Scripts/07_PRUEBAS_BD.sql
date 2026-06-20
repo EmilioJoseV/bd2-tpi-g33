@@ -102,3 +102,39 @@ FROM Clientes
 WHERE Documento = '12345678';
 ------------------------------------------------------------------------------------------------
 GO
+
+------------------------------------------------------------------------------------------------
+-- #7 - Registrar compras de mercadería realizadas a proveedores
+
+-- Prueba de registro de compra nueva.
+EXEC sp_registrarCompra
+    @IdProveedor = 1,
+    @IdEmpleado = 1,
+    @IdEstadoCompra = 1,
+    @NumeroComprobante = NULL;
+GO
+
+-- Prueba de validacion de estado de compra no permitido para registrar.
+EXEC sp_registrarCompra
+    @IdProveedor = 1,
+    @IdEmpleado = 1,
+    @IdEstadoCompra = 3,
+    @NumeroComprobante = 'COMP-0005';
+GO
+
+-- Prueba de actualizacion de compra para completar numero de comprobante y cambiar estado.
+EXEC sp_actualizarCompra
+    @IdCompra = 4,
+    @IdProveedor = 1,
+    @IdEmpleado = 1,
+    @IdEstadoCompra = 2,
+    @NumeroComprobante = 'COMP-0004';
+GO
+
+-- Consulta para verificar los datos de la compra
+SELECT IdCompra, IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total
+FROM Compras
+WHERE NumeroComprobante = 'COMP-0004'
+ORDER BY IdCompra;
+------------------------------------------------------------------------------------------------
+GO

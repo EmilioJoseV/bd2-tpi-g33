@@ -87,4 +87,227 @@ BEGIN
     PRINT 'Cliente registrado correctamente';
 END;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #7 - Registrar compras de mercadería realizadas a proveedores
+-- sp_registrarCompra: registra una compra validando bien los datos de entrada.
+
+CREATE PROCEDURE sp_registrarCompra
+    @IdProveedor INT,
+    @IdEmpleado INT,
+    @IdEstadoCompra INT,
+    @NumeroComprobante VARCHAR(50)
+AS
+BEGIN
+-- Limpiar espacios en blanco del numero de comprobante
+    SET @NumeroComprobante = LTRIM(RTRIM(@NumeroComprobante));
+
+    IF @IdProveedor IS NULL OR @IdProveedor <= 0
+    BEGIN
+        PRINT 'Debe ingresar un id de proveedor valido';
+        RETURN;
+    END
+
+    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
+    BEGIN
+        PRINT 'Debe ingresar un id de empleado valido';
+        RETURN;
+    END
+
+    IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
+    BEGIN
+        PRINT 'Debe ingresar un id de estado de compra valido';
+        RETURN;
+    END
+    
+-- Validar existencia y datos de los registros relacionados.
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+    )
+    BEGIN
+        PRINT 'No existe un proveedor con el id ingresado';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El proveedor ingresado no se encuentra activo';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+    )
+    BEGIN
+        PRINT 'No existe un empleado con el id ingresado';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El empleado ingresado no se encuentra activo';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM EstadosCompra
+        WHERE IdEstadoCompra = @IdEstadoCompra
+    )
+    BEGIN
+        PRINT 'No existe un estado de compra con el id ingresado';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM EstadosCompra
+        WHERE IdEstadoCompra = @IdEstadoCompra
+          AND UPPER(Nombre) = 'CANCELADA'
+    )
+    BEGIN
+        PRINT 'No se puede registrar una compra nueva con estado cancelada';
+        RETURN;
+    END
+
+    IF @NumeroComprobante = ''
+        SET @NumeroComprobante = NULL;
+
+-- Registrar la compra con los datos ingresados, el campo Total se completa con 0 ya que se actualizara al agregar los detalles de compra
+    INSERT INTO Compras (IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total)
+    VALUES (@IdProveedor, @IdEmpleado, @IdEstadoCompra, SYSDATETIME(), @NumeroComprobante, 0);
+
+    PRINT 'Compra registrada correctamente';
+END;
+GO
+
+-- sp_actualizarCompra: actualiza los datos principales de una compra existente.
+
+CREATE PROCEDURE sp_actualizarCompra
+    @IdCompra INT,
+    @IdProveedor INT,
+    @IdEmpleado INT,
+    @IdEstadoCompra INT,
+    @NumeroComprobante VARCHAR(50)
+AS
+BEGIN
+-- Limpiar espacios en blanco del numero de comprobante
+    SET @NumeroComprobante = LTRIM(RTRIM(@NumeroComprobante));
+
+-- Validar datos ingresados, asi como se hace en el procedimiento de registro pero considerando que el numero de comprobante repetido no es valido
+    IF @IdCompra IS NULL OR @IdCompra <= 0
+    BEGIN
+        PRINT 'Debe ingresar un id de compra valido';
+        RETURN;
+    END
+
+    IF @IdProveedor IS NULL OR @IdProveedor <= 0
+    BEGIN
+        PRINT 'Debe ingresar un id de proveedor valido';
+        RETURN;
+    END
+
+    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
+    BEGIN
+        PRINT 'Debe ingresar un id de empleado valido';
+        RETURN;
+    END
+
+    IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
+    BEGIN
+        PRINT 'Debe ingresar un id de estado de compra valido';
+        RETURN;
+    END
+
+-- Validar existencia y datos de los registros relacionados.
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Compras
+        WHERE IdCompra = @IdCompra
+    )
+    BEGIN
+        PRINT 'No existe una compra con el id ingresado';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+    )
+    BEGIN
+        PRINT 'No existe un proveedor con el id ingresado';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE IdProveedor = @IdProveedor
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El proveedor ingresado no se encuentra activo';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+    )
+    BEGIN
+        PRINT 'No existe un empleado con el id ingresado';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+          AND Activo = 0
+    )
+    BEGIN
+        PRINT 'El empleado ingresado no se encuentra activo';
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM EstadosCompra
+        WHERE IdEstadoCompra = @IdEstadoCompra
+    )
+    BEGIN
+        PRINT 'No existe un estado de compra con el id ingresado';
+        RETURN;
+    END
+
+    IF @NumeroComprobante = ''
+        SET @NumeroComprobante = NULL;
+
+-- Actualizar la compra con los nuevos datos ingresados.
+    UPDATE Compras
+    SET IdProveedor = @IdProveedor,
+        IdEmpleado = @IdEmpleado,
+        IdEstadoCompra = @IdEstadoCompra,
+        NumeroComprobante = @NumeroComprobante
+    WHERE IdCompra = @IdCompra;
+
+    PRINT 'Compra actualizada correctamente';
+END;
+GO
 ------------------------------------------------------------------------------------------------
