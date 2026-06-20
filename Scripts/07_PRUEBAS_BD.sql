@@ -80,7 +80,7 @@ WHERE CUIT = '30-12345678-3';
 GO
 
 ------------------------------------------------------------------------------------------------
--- #5 - Registrar clientes para asociarlos a las ventas realizadas
+-- #5 - Registrar y administrar clientes
 
 -- Prueba de registro de cliente nuevo.
 EXEC sp_registrarCliente
@@ -98,6 +98,17 @@ EXEC sp_registrarCliente
     @Documento = '12345678',
     @Email = 'marcopolo@email.com',
     @Telefono = '1166778899';
+GO
+
+-- Prueba de actualizacion de cliente.
+EXEC sp_actualizarCliente
+    @IdCliente = 3,
+    @Apellido = 'Doe',
+    @Nombre = 'John',
+    @Documento = '12345678',
+    @Email = 'johndoe@email.com',
+    @Telefono = '1177889900',
+    @Activo = 1;
 GO
 
 -- Consulta para verificar los datos del cliente
