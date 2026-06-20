@@ -126,7 +126,8 @@ EXEC sp_registrarCompra
     @IdProveedor = 1,
     @IdEmpleado = 1,
     @IdEstadoCompra = 1,
-    @NumeroComprobante = NULL;
+    @NumeroComprobante = NULL,
+    @Total = 185000.00;
 GO
 
 -- Prueba de validacion de estado de compra no permitido para registrar.
@@ -134,16 +135,18 @@ EXEC sp_registrarCompra
     @IdProveedor = 1,
     @IdEmpleado = 1,
     @IdEstadoCompra = 3,
-    @NumeroComprobante = 'COMP-0005';
+    @NumeroComprobante = 'COMP-0005',
+    @Total = 99000.00;
 GO
 
--- Prueba de actualizacion de compra para completar numero de comprobante y cambiar estado.
+-- Prueba de actualizacion de compra para completar numero, cambiar estado y total.
 EXEC sp_actualizarCompra
     @IdCompra = 4,
     @IdProveedor = 1,
     @IdEmpleado = 1,
     @IdEstadoCompra = 2,
-    @NumeroComprobante = 'COMP-0004';
+    @NumeroComprobante = 'COMP-0004',
+    @Total = 210500.00;
 GO
 
 -- Consulta para verificar los datos de la compra

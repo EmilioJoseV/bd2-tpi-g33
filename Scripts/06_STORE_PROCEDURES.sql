@@ -292,7 +292,8 @@ CREATE PROCEDURE sp_registrarCompra
     @IdProveedor INT,
     @IdEmpleado INT,
     @IdEstadoCompra INT,
-    @NumeroComprobante VARCHAR(50)
+    @NumeroComprobante VARCHAR(50),
+    @Total DECIMAL(12,2)
 AS
 BEGIN
 -- Limpiar espacios en blanco del numero de comprobante
@@ -313,6 +314,12 @@ BEGIN
     IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
     BEGIN
         PRINT 'IdEstadoCompra invalido';
+        RETURN;
+    END
+
+    IF @Total IS NULL OR @Total < 0
+    BEGIN
+        PRINT 'Total invalido';
         RETURN;
     END
     
@@ -383,9 +390,9 @@ BEGIN
     IF @NumeroComprobante = ''
         SET @NumeroComprobante = NULL;
 
--- Registrar la compra con los datos ingresados, el campo Total se completa con 0 ya que se actualizara al agregar los detalles de compra
+-- Registrar la compra con el total final del comprobante.
     INSERT INTO Compras (IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total)
-    VALUES (@IdProveedor, @IdEmpleado, @IdEstadoCompra, SYSDATETIME(), @NumeroComprobante, 0);
+    VALUES (@IdProveedor, @IdEmpleado, @IdEstadoCompra, SYSDATETIME(), @NumeroComprobante, @Total);
 
     PRINT 'Compra registrada';
 END;
@@ -398,13 +405,14 @@ CREATE PROCEDURE sp_actualizarCompra
     @IdProveedor INT,
     @IdEmpleado INT,
     @IdEstadoCompra INT,
-    @NumeroComprobante VARCHAR(50)
+    @NumeroComprobante VARCHAR(50),
+    @Total DECIMAL(12,2)
 AS
 BEGIN
 -- Limpiar espacios en blanco del numero de comprobante
     SET @NumeroComprobante = LTRIM(RTRIM(@NumeroComprobante));
 
--- Validar datos ingresados, asi como se hace en el procedimiento de registro pero considerando que el numero de comprobante repetido no es valido
+-- Validar datos ingresados para la actualizacion de la compra.
     IF @IdCompra IS NULL OR @IdCompra <= 0
     BEGIN
         PRINT 'IdCompra invalido';
@@ -426,6 +434,12 @@ BEGIN
     IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
     BEGIN
         PRINT 'IdEstadoCompra invalido';
+        RETURN;
+    END
+
+    IF @Total IS NULL OR @Total < 0
+    BEGIN
+        PRINT 'Total invalido';
         RETURN;
     END
 
@@ -500,7 +514,8 @@ BEGIN
     SET IdProveedor = @IdProveedor,
         IdEmpleado = @IdEmpleado,
         IdEstadoCompra = @IdEstadoCompra,
-        NumeroComprobante = @NumeroComprobante
+        NumeroComprobante = @NumeroComprobante,
+        Total = @Total
     WHERE IdCompra = @IdCompra;
 
     PRINT 'Compra actualizada';
