@@ -156,3 +156,84 @@ WHERE NumeroComprobante = 'COMP-0004'
 ORDER BY IdCompra;
 ------------------------------------------------------------------------------------------------
 GO
+
+------------------------------------------------------------------------------------------------
+-- #9 - Detallar los productos incluidos en cada compra y cada venta, indicando cantidad, precio unitario y subtotal
+
+-- Prueba de alta de detalle de compra.
+EXEC sp_registrarDetalleCompra
+    @IdCompra = 1,
+    @IdProducto = 1,
+    @Cantidad = 2,
+    @PrecioUnitario = 7000.00;
+GO
+
+-- Prueba de alta de detalle de compra repitiendo el articulo.
+EXEC sp_registrarDetalleCompra
+    @IdCompra = 1,
+    @IdProducto = 1,
+    @Cantidad = 1,
+    @PrecioUnitario = 7100.00;
+GO
+
+-- Prueba de actualizacion de detalle de compra.
+EXEC sp_actualizarDetalleCompra
+    @IdDetalleCompra = 6,
+    @IdCompra = 1,
+    @IdProducto = 1,
+    @Cantidad = 3,
+    @PrecioUnitario = 7200.00;
+GO
+
+-- Prueba de baja de detalle de compra.
+EXEC sp_eliminarDetalleCompra
+    @IdDetalleCompra = 7;
+GO
+
+-- Consulta para verificar los detalles de la compra.
+SELECT IdDetalleCompra, IdCompra, IdProducto, Cantidad, PrecioUnitario, Subtotal
+FROM DetalleCompras
+WHERE IdCompra = 1
+ORDER BY IdDetalleCompra;
+GO
+
+-- Prueba de alta de detalle de venta.
+EXEC sp_registrarDetalleVenta
+    @IdVenta = 1,
+    @IdProducto = 1,
+    @Cantidad = 1;
+GO
+
+-- Prueba de alta de detalle de venta repitiendo el articulo.
+EXEC sp_registrarDetalleVenta
+    @IdVenta = 1,
+    @IdProducto = 1,
+    @Cantidad = 2;
+GO
+
+-- Prueba de actualizacion de detalle de venta.
+EXEC sp_actualizarDetalleVenta
+    @IdDetalleVenta = 8,
+    @IdVenta = 1,
+    @IdProducto = 1,
+    @Cantidad = 3;
+GO
+
+-- Prueba de baja de detalle de venta.
+EXEC sp_eliminarDetalleVenta
+    @IdDetalleVenta = 9;
+GO
+
+-- Consulta para verificar los detalles de la venta.
+SELECT IdDetalleVenta, IdVenta, IdProducto, Cantidad, PrecioUnitario, Subtotal
+FROM DetalleVentas
+WHERE IdVenta = 1
+ORDER BY IdDetalleVenta;
+GO
+
+-- Consulta para verificar el total recalculado de la venta.
+SELECT IdVenta, Total
+FROM Ventas
+WHERE IdVenta = 1;
+------------------------------------------------------------------------------------------------
+GO
