@@ -291,35 +291,30 @@ GO
 CREATE PROCEDURE sp_registrarCompra
     @IdProveedor INT,
     @IdEmpleado INT,
-    @IdEstadoCompra INT,
     @NumeroComprobante VARCHAR(50),
     @Total DECIMAL(12,2)
 AS
 BEGIN
+    DECLARE @IdEstadoPendiente INT;
+
 -- Limpiar espacios en blanco del numero de comprobante
     SET @NumeroComprobante = LTRIM(RTRIM(@NumeroComprobante));
 
     IF @IdProveedor IS NULL OR @IdProveedor <= 0
     BEGIN
-        PRINT 'IdProveedor invalido';
+        PRINT 'El proveedor es invalido';
         RETURN;
     END
 
     IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
     BEGIN
-        PRINT 'IdEmpleado invalido';
-        RETURN;
-    END
-
-    IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
-    BEGIN
-        PRINT 'IdEstadoCompra invalido';
+        PRINT 'El empleado es invalido';
         RETURN;
     END
 
     IF @Total IS NULL OR @Total < 0
     BEGIN
-        PRINT 'Total invalido';
+        PRINT 'El total es invalido';
         RETURN;
     END
     
@@ -366,33 +361,24 @@ BEGIN
         RETURN;
     END
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM EstadosCompra
-        WHERE IdEstadoCompra = @IdEstadoCompra
-    )
-    BEGIN
-        PRINT 'No existe un estado de compra con ese id';
-        RETURN;
-    END
+-- Iniciamos la compra siempre con estado pendiente, por lo que buscamos el id de ese estado para asignarlo a la compra. 
+-- Si no existe el estado pendiente, se muestra un mensaje de error y se cancela el registro de la compra.
+    SELECT @IdEstadoPendiente = IdEstadoCompra
+    FROM EstadosCompra
+    WHERE UPPER(Nombre) = 'PENDIENTE';
 
-    IF EXISTS (
-        SELECT 1
-        FROM EstadosCompra
-        WHERE IdEstadoCompra = @IdEstadoCompra
-          AND UPPER(Nombre) = 'CANCELADA'
-    )
+    IF @IdEstadoPendiente IS NULL
     BEGIN
-        PRINT 'No se puede registrar una compra cancelada';
+        PRINT 'No existe el estado pendiente registrado en la bd';
         RETURN;
     END
 
     IF @NumeroComprobante = ''
         SET @NumeroComprobante = NULL;
 
--- Registrar la compra con el total final del comprobante.
+-- Registrar la compra arrancando siempre en pendiente.
     INSERT INTO Compras (IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total)
-    VALUES (@IdProveedor, @IdEmpleado, @IdEstadoCompra, SYSDATETIME(), @NumeroComprobante, @Total);
+    VALUES (@IdProveedor, @IdEmpleado, @IdEstadoPendiente, SYSDATETIME(), @NumeroComprobante, @Total);
 
     PRINT 'Compra registrada';
 END;
@@ -415,31 +401,31 @@ BEGIN
 -- Validar datos ingresados para la actualizacion de la compra.
     IF @IdCompra IS NULL OR @IdCompra <= 0
     BEGIN
-        PRINT 'IdCompra invalido';
+        PRINT 'El id de la compra es invalido';
         RETURN;
     END
 
     IF @IdProveedor IS NULL OR @IdProveedor <= 0
     BEGIN
-        PRINT 'IdProveedor invalido';
+        PRINT 'El proveedor es invalido';
         RETURN;
     END
 
     IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
     BEGIN
-        PRINT 'IdEmpleado invalido';
+        PRINT 'El empleado es invalido';
         RETURN;
     END
 
     IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
     BEGIN
-        PRINT 'IdEstadoCompra invalido';
+        PRINT 'El estado de la compra es invalido';
         RETURN;
     END
 
     IF @Total IS NULL OR @Total < 0
     BEGIN
-        PRINT 'Total invalido';
+        PRINT 'El total es invalido';
         RETURN;
     END
 
@@ -508,6 +494,22 @@ BEGIN
 
     IF @NumeroComprobante = ''
         SET @NumeroComprobante = NULL;
+
+    IF EXISTS (
+        SELECT 1
+        FROM EstadosCompra
+        WHERE IdEstadoCompra = @IdEstadoCompra
+          AND UPPER(Nombre) = 'CONFIRMADA'
+    )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM DetalleCompras
+        WHERE IdCompra = @IdCompra
+    )
+    BEGIN
+        PRINT 'No se puede confirmar una compra sin detalle';
+        RETURN;
+    END
 
 -- Actualizar la compra con los nuevos datos ingresados.
     UPDATE Compras
@@ -581,6 +583,18 @@ BEGIN
 
     IF EXISTS (
         SELECT 1
+        FROM Compras c
+        INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+        WHERE c.IdCompra = @IdCompra
+          AND UPPER(ec.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una compra confirmada';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
         FROM Productos
         WHERE IdProducto = @IdProducto
           AND Activo = 0
@@ -603,23 +617,17 @@ GO
 
 CREATE PROCEDURE sp_actualizarDetalleCompra
     @IdDetalleCompra INT,
-    @IdCompra INT,
     @IdProducto INT,
     @Cantidad INT,
     @PrecioUnitario DECIMAL(12,2)
 AS
 BEGIN
     DECLARE @Subtotal DECIMAL(12,2);
+    DECLARE @IdCompra INT;
 
     IF @IdDetalleCompra IS NULL OR @IdDetalleCompra <= 0
     BEGIN
         PRINT 'El id de detalle de compra es invalido';
-        RETURN;
-    END
-
-    IF @IdCompra IS NULL OR @IdCompra <= 0
-    BEGIN
-        PRINT 'El id de compra es invalido';
         RETURN;
     END
 
@@ -653,21 +661,28 @@ BEGIN
 
     IF NOT EXISTS (
         SELECT 1
-        FROM Compras
-        WHERE IdCompra = @IdCompra
-    )
-    BEGIN
-        PRINT 'No existe una compra con ese id';
-        RETURN;
-    END
-
-    IF NOT EXISTS (
-        SELECT 1
         FROM Productos
         WHERE IdProducto = @IdProducto
     )
     BEGIN
         PRINT 'No existe un producto con ese id';
+        RETURN;
+    END
+
+    SELECT @IdCompra = IdCompra
+    FROM DetalleCompras
+    WHERE IdDetalleCompra = @IdDetalleCompra;
+
+-- Valiamdos que la compra no este confirmada, ya que no se puede modificar el detalle de una compra confirmada.
+    IF EXISTS (
+        SELECT 1
+        FROM Compras c
+        INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+        WHERE c.IdCompra = @IdCompra
+          AND UPPER(ec.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una compra confirmada';
         RETURN;
     END
 
@@ -685,8 +700,7 @@ BEGIN
     SET @Subtotal = @Cantidad * @PrecioUnitario;
 
     UPDATE DetalleCompras
-    SET IdCompra = @IdCompra,
-        IdProducto = @IdProducto,
+    SET IdProducto = @IdProducto,
         Cantidad = @Cantidad,
         PrecioUnitario = @PrecioUnitario,
         Subtotal = @Subtotal
@@ -702,6 +716,8 @@ CREATE PROCEDURE sp_eliminarDetalleCompra
     @IdDetalleCompra INT
 AS
 BEGIN
+    DECLARE @IdCompra INT;
+
     IF @IdDetalleCompra IS NULL OR @IdDetalleCompra <= 0
     BEGIN
         PRINT 'El id de detalle de compra es invalido';
@@ -715,6 +731,23 @@ BEGIN
     )
     BEGIN
         PRINT 'No existe un detalle de compra con ese id';
+        RETURN;
+    END
+
+    SELECT @IdCompra = IdCompra
+    FROM DetalleCompras
+    WHERE IdDetalleCompra = @IdDetalleCompra;
+
+-- Validamos que la compra no este confirmada, ya que no se puede modificar el detalle de una compra confirmada.
+    IF EXISTS (
+        SELECT 1
+        FROM Compras c
+        INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+        WHERE c.IdCompra = @IdCompra
+          AND UPPER(ec.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una compra confirmada';
         RETURN;
     END
 
@@ -774,6 +807,19 @@ BEGIN
         RETURN;
     END
 
+-- Validamos que la venta no este confirmada, ya que no se puede modificar el detalle de una venta confirmada.
+    IF EXISTS (
+        SELECT 1
+        FROM Ventas v
+        INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta
+        WHERE v.IdVenta = @IdVenta
+          AND UPPER(ev.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una venta confirmada';
+        RETURN;
+    END
+
     IF EXISTS (
         SELECT 1
         FROM Productos
@@ -791,47 +837,36 @@ BEGIN
 
     SET @Subtotal = @Cantidad * @PrecioUnitario;
 
-    BEGIN TRANSACTION;
-
     INSERT INTO DetalleVentas (IdVenta, IdProducto, Cantidad, PrecioUnitario, Subtotal)
     VALUES (@IdVenta, @IdProducto, @Cantidad, @PrecioUnitario, @Subtotal);
 
     UPDATE Ventas
     SET Total = ISNULL((
-        SELECT SUM(Subtotal)
-        FROM DetalleVentas
-        WHERE IdVenta = @IdVenta
+        SELECT SUM(dv.Subtotal)
+        FROM DetalleVentas dv
+        WHERE dv.IdVenta = @IdVenta
     ), 0)
     WHERE IdVenta = @IdVenta;
-
-    COMMIT TRANSACTION;
 
     PRINT 'Detalle de venta registrado';
 END;
 GO
 
--- sp_actualizarDetalleVenta: actualiza una linea de detalle de venta.
+-- sp_actualizarDetalleVenta: actualiza un registro de detalle de venta.
 
 CREATE PROCEDURE sp_actualizarDetalleVenta
     @IdDetalleVenta INT,
-    @IdVenta INT,
     @IdProducto INT,
     @Cantidad INT
 AS
 BEGIN
     DECLARE @PrecioUnitario DECIMAL(12,2);
     DECLARE @Subtotal DECIMAL(12,2);
-    DECLARE @IdVentaAnterior INT;
+    DECLARE @IdVenta INT;
 
     IF @IdDetalleVenta IS NULL OR @IdDetalleVenta <= 0
     BEGIN
         PRINT 'El id de detalle de venta es invalido';
-        RETURN;
-    END
-
-    IF @IdVenta IS NULL OR @IdVenta <= 0
-    BEGIN
-        PRINT 'El id de venta es invalido';
         RETURN;
     END
 
@@ -859,21 +894,27 @@ BEGIN
 
     IF NOT EXISTS (
         SELECT 1
-        FROM Ventas
-        WHERE IdVenta = @IdVenta
-    )
-    BEGIN
-        PRINT 'No existe una venta con ese id';
-        RETURN;
-    END
-
-    IF NOT EXISTS (
-        SELECT 1
         FROM Productos
         WHERE IdProducto = @IdProducto
     )
     BEGIN
         PRINT 'No existe un producto con ese id';
+        RETURN;
+    END
+
+    SELECT @IdVenta = IdVenta
+    FROM DetalleVentas
+    WHERE IdDetalleVenta = @IdDetalleVenta;
+
+    IF EXISTS (
+        SELECT 1
+        FROM Ventas v
+        INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta
+        WHERE v.IdVenta = @IdVenta
+          AND UPPER(ev.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una venta confirmada';
         RETURN;
     END
 
@@ -892,17 +933,10 @@ BEGIN
     FROM Productos
     WHERE IdProducto = @IdProducto;
 
-    SELECT @IdVentaAnterior = IdVenta
-    FROM DetalleVentas
-    WHERE IdDetalleVenta = @IdDetalleVenta;
-
     SET @Subtotal = @Cantidad * @PrecioUnitario;
 
-    BEGIN TRANSACTION;
-
     UPDATE DetalleVentas
-    SET IdVenta = @IdVenta,
-        IdProducto = @IdProducto,
+    SET IdProducto = @IdProducto,
         Cantidad = @Cantidad,
         PrecioUnitario = @PrecioUnitario,
         Subtotal = @Subtotal
@@ -910,21 +944,11 @@ BEGIN
 
     UPDATE Ventas
     SET Total = ISNULL((
-        SELECT SUM(Subtotal)
-        FROM DetalleVentas
-        WHERE IdVenta = @IdVentaAnterior
-    ), 0)
-    WHERE IdVenta = @IdVentaAnterior;
-
-    UPDATE Ventas
-    SET Total = ISNULL((
-        SELECT SUM(Subtotal)
-        FROM DetalleVentas
-        WHERE IdVenta = @IdVenta
+        SELECT SUM(dv.Subtotal)
+        FROM DetalleVentas dv
+        WHERE dv.IdVenta = @IdVenta
     ), 0)
     WHERE IdVenta = @IdVenta;
-
-    COMMIT TRANSACTION;
 
     PRINT 'Detalle de venta actualizado';
 END;
@@ -958,20 +982,28 @@ BEGIN
     FROM DetalleVentas
     WHERE IdDetalleVenta = @IdDetalleVenta;
 
-    BEGIN TRANSACTION;
+    IF EXISTS (
+        SELECT 1
+        FROM Ventas v
+        INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta
+        WHERE v.IdVenta = @IdVenta
+          AND UPPER(ev.Nombre) = 'CONFIRMADA'
+    )
+    BEGIN
+        PRINT 'No se puede tocar el detalle de una venta confirmada';
+        RETURN;
+    END
 
     DELETE FROM DetalleVentas
     WHERE IdDetalleVenta = @IdDetalleVenta;
 
     UPDATE Ventas
     SET Total = ISNULL((
-        SELECT SUM(Subtotal)
-        FROM DetalleVentas
-        WHERE IdVenta = @IdVenta
+        SELECT SUM(dv.Subtotal)
+        FROM DetalleVentas dv
+        WHERE dv.IdVenta = @IdVenta
     ), 0)
     WHERE IdVenta = @IdVenta;
-
-    COMMIT TRANSACTION;
 
     PRINT 'Detalle de venta eliminado';
 END;
