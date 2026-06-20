@@ -2,8 +2,8 @@ USE BD2_TPI_TIENDA_INDUMENTARIA;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #3 - Registrar proveedores y mantener sus datos de contacto
--- sp_registrarProveedor: registra un nuevo proveedor validando que el CUIT no exista.
+-- #3 - Registrar y administrar proveedores
+-- sp_registrarProveedor: da de alta un proveedor y valida que el CUIT no se repita.
 
 CREATE PROCEDURE sp_registrarProveedor
     @RazonSocial VARCHAR(150),
@@ -13,49 +13,131 @@ CREATE PROCEDURE sp_registrarProveedor
     @Direccion VARCHAR(200)
 AS
 BEGIN
+    -- Limpiar espacios en blanco de los campos de texto.
+    SET @RazonSocial = LTRIM(RTRIM(@RazonSocial));
+    SET @CUIT = LTRIM(RTRIM(@CUIT));
+    SET @Email = LTRIM(RTRIM(@Email));
+    SET @Telefono = LTRIM(RTRIM(@Telefono));
+    SET @Direccion = LTRIM(RTRIM(@Direccion));
+
+    -- Validar los datos obligatorios antes del insert.
+    IF @RazonSocial IS NULL OR @RazonSocial = ''
+    BEGIN
+        PRINT 'Falta la razon social.';
+        RETURN;
+    END
+
+    IF @CUIT IS NULL OR @CUIT = ''
+    BEGIN
+        PRINT 'Falta el CUIT.';
+        RETURN;
+    END
+
+    -- Si vino vacio en los opcionales, se guarda como NULL.
+    IF @Email = ''
+        SET @Email = NULL;
+
+    IF @Telefono = ''
+        SET @Telefono = NULL;
+
+    IF @Direccion = ''
+        SET @Direccion = NULL;
+
     IF EXISTS (
         SELECT 1
         FROM Proveedores
-        WHERE CUIT = @CUIT
+        WHERE UPPER(CUIT) = UPPER(@CUIT)
     )
     BEGIN
-        PRINT 'Ya existe un proveedor registrado con ese CUIT.';
+        PRINT 'Ya existe un proveedor con ese CUIT.';
         RETURN;
     END
 
     INSERT INTO Proveedores (RazonSocial, CUIT, Email, Telefono, Direccion, Activo)
     VALUES (@RazonSocial, @CUIT, @Email, @Telefono, @Direccion, 1);
 
-    PRINT 'Proveedor registrado correctamente.';
+    PRINT 'Proveedor registrado.';
 END;
 GO
 
--- sp_actualizarContactoProveedor: actualizar datos como email, telefono y direccion de un proveedor existente
+-- sp_actualizarProveedor: actualiza los datos principales de un proveedor existente.
 
-CREATE PROCEDURE sp_actualizarContactoProveedor
+CREATE PROCEDURE sp_actualizarProveedor
     @IdProveedor INT,
+    @RazonSocial VARCHAR(150),
+    @CUIT VARCHAR(20),
     @Email VARCHAR(150),
     @Telefono VARCHAR(30),
-    @Direccion VARCHAR(200)
+    @Direccion VARCHAR(200),
+    @Activo BIT
 AS
 BEGIN
+    -- Limpiar espacios en blanco de los campos de texto.
+    SET @RazonSocial = LTRIM(RTRIM(@RazonSocial));
+    SET @CUIT = LTRIM(RTRIM(@CUIT));
+    SET @Email = LTRIM(RTRIM(@Email));
+    SET @Telefono = LTRIM(RTRIM(@Telefono));
+    SET @Direccion = LTRIM(RTRIM(@Direccion));
+
+    -- Validar que el id y los datos obligatorios vengan bien.
+    IF @IdProveedor IS NULL OR @IdProveedor <= 0
+    BEGIN
+        PRINT 'IdProveedor invalido.';
+        RETURN;
+    END
+
+    IF @RazonSocial IS NULL OR @RazonSocial = ''
+    BEGIN
+        PRINT 'Falta la razon social.';
+        RETURN;
+    END
+
+    IF @CUIT IS NULL OR @CUIT = ''
+    BEGIN
+        PRINT 'Falta el CUIT.';
+        RETURN;
+    END
+
+    IF @Email = ''
+        SET @Email = NULL;
+
+    IF @Telefono = ''
+        SET @Telefono = NULL;
+
+    IF @Direccion = ''
+        SET @Direccion = NULL;
+
     IF NOT EXISTS (
         SELECT 1
         FROM Proveedores
         WHERE IdProveedor = @IdProveedor
     )
     BEGIN
-        PRINT 'No existe un proveedor con el IdProveedor ingresado';
+        PRINT 'No existe un proveedor con ese id.';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM Proveedores
+        WHERE UPPER(CUIT) = UPPER(@CUIT)
+          AND IdProveedor <> @IdProveedor
+    )
+    BEGIN
+        PRINT 'Ya existe otro proveedor con ese CUIT.';
         RETURN;
     END
 
     UPDATE Proveedores
-    SET Email = @Email,
+    SET RazonSocial = @RazonSocial,
+        CUIT = @CUIT,
+        Email = @Email,
         Telefono = @Telefono,
-        Direccion = @Direccion
+        Direccion = @Direccion,
+        Activo = @Activo
     WHERE IdProveedor = @IdProveedor;
 
-PRINT 'Datos de contacto actualizados correctamente.';
+    PRINT 'Proveedor actualizado.';
 END;
 GO
 
@@ -77,14 +159,14 @@ BEGIN
         WHERE Documento = @Documento
     )
     BEGIN
-        PRINT 'Ya existe un cliente registrado con ese documento';
+        PRINT 'Ya existe un cliente con ese documento';
         RETURN;
     END
 
     INSERT INTO Clientes (Apellido, Nombre, Documento, Email, Telefono, FechaAlta, Activo)
     VALUES (@Apellido, @Nombre, @Documento, @Email, @Telefono, GETDATE(), 1);
 
-    PRINT 'Cliente registrado correctamente';
+    PRINT 'Cliente registrado';
 END;
 GO
 
@@ -104,19 +186,19 @@ BEGIN
 
     IF @IdProveedor IS NULL OR @IdProveedor <= 0
     BEGIN
-        PRINT 'Debe ingresar un id de proveedor valido';
+        PRINT 'IdProveedor invalido';
         RETURN;
     END
 
     IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
     BEGIN
-        PRINT 'Debe ingresar un id de empleado valido';
+        PRINT 'IdEmpleado invalido';
         RETURN;
     END
 
     IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
     BEGIN
-        PRINT 'Debe ingresar un id de estado de compra valido';
+        PRINT 'IdEstadoCompra invalido';
         RETURN;
     END
     
@@ -127,7 +209,7 @@ BEGIN
         WHERE IdProveedor = @IdProveedor
     )
     BEGIN
-        PRINT 'No existe un proveedor con el id ingresado';
+        PRINT 'No existe un proveedor con ese id';
         RETURN;
     END
 
@@ -138,7 +220,7 @@ BEGIN
           AND Activo = 0
     )
     BEGIN
-        PRINT 'El proveedor ingresado no se encuentra activo';
+        PRINT 'El proveedor no esta activo';
         RETURN;
     END
 
@@ -148,7 +230,7 @@ BEGIN
         WHERE IdEmpleado = @IdEmpleado
     )
     BEGIN
-        PRINT 'No existe un empleado con el id ingresado';
+        PRINT 'No existe un empleado con ese id';
         RETURN;
     END
 
@@ -159,7 +241,7 @@ BEGIN
           AND Activo = 0
     )
     BEGIN
-        PRINT 'El empleado ingresado no se encuentra activo';
+        PRINT 'El empleado no esta activo';
         RETURN;
     END
 
@@ -169,7 +251,7 @@ BEGIN
         WHERE IdEstadoCompra = @IdEstadoCompra
     )
     BEGIN
-        PRINT 'No existe un estado de compra con el id ingresado';
+        PRINT 'No existe un estado de compra con ese id';
         RETURN;
     END
 
@@ -180,7 +262,7 @@ BEGIN
           AND UPPER(Nombre) = 'CANCELADA'
     )
     BEGIN
-        PRINT 'No se puede registrar una compra nueva con estado cancelada';
+        PRINT 'No se puede registrar una compra cancelada';
         RETURN;
     END
 
@@ -191,7 +273,7 @@ BEGIN
     INSERT INTO Compras (IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total)
     VALUES (@IdProveedor, @IdEmpleado, @IdEstadoCompra, SYSDATETIME(), @NumeroComprobante, 0);
 
-    PRINT 'Compra registrada correctamente';
+    PRINT 'Compra registrada';
 END;
 GO
 
@@ -211,25 +293,25 @@ BEGIN
 -- Validar datos ingresados, asi como se hace en el procedimiento de registro pero considerando que el numero de comprobante repetido no es valido
     IF @IdCompra IS NULL OR @IdCompra <= 0
     BEGIN
-        PRINT 'Debe ingresar un id de compra valido';
+        PRINT 'IdCompra invalido';
         RETURN;
     END
 
     IF @IdProveedor IS NULL OR @IdProveedor <= 0
     BEGIN
-        PRINT 'Debe ingresar un id de proveedor valido';
+        PRINT 'IdProveedor invalido';
         RETURN;
     END
 
     IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
     BEGIN
-        PRINT 'Debe ingresar un id de empleado valido';
+        PRINT 'IdEmpleado invalido';
         RETURN;
     END
 
     IF @IdEstadoCompra IS NULL OR @IdEstadoCompra <= 0
     BEGIN
-        PRINT 'Debe ingresar un id de estado de compra valido';
+        PRINT 'IdEstadoCompra invalido';
         RETURN;
     END
 
@@ -240,7 +322,7 @@ BEGIN
         WHERE IdCompra = @IdCompra
     )
     BEGIN
-        PRINT 'No existe una compra con el id ingresado';
+        PRINT 'No existe una compra con ese id';
         RETURN;
     END
 
@@ -250,7 +332,7 @@ BEGIN
         WHERE IdProveedor = @IdProveedor
     )
     BEGIN
-        PRINT 'No existe un proveedor con el id ingresado';
+        PRINT 'No existe un proveedor con ese id';
         RETURN;
     END
 
@@ -261,7 +343,7 @@ BEGIN
           AND Activo = 0
     )
     BEGIN
-        PRINT 'El proveedor ingresado no se encuentra activo';
+        PRINT 'El proveedor no esta activo';
         RETURN;
     END
 
@@ -271,7 +353,7 @@ BEGIN
         WHERE IdEmpleado = @IdEmpleado
     )
     BEGIN
-        PRINT 'No existe un empleado con el id ingresado';
+        PRINT 'No existe un empleado con ese id';
         RETURN;
     END
 
@@ -282,7 +364,7 @@ BEGIN
           AND Activo = 0
     )
     BEGIN
-        PRINT 'El empleado ingresado no se encuentra activo';
+        PRINT 'El empleado no esta activo';
         RETURN;
     END
 
@@ -292,7 +374,7 @@ BEGIN
         WHERE IdEstadoCompra = @IdEstadoCompra
     )
     BEGIN
-        PRINT 'No existe un estado de compra con el id ingresado';
+        PRINT 'No existe un estado de compra con ese id';
         RETURN;
     END
 
@@ -307,7 +389,7 @@ BEGIN
         NumeroComprobante = @NumeroComprobante
     WHERE IdCompra = @IdCompra;
 
-    PRINT 'Compra actualizada correctamente';
+    PRINT 'Compra actualizada';
 END;
 GO
 ------------------------------------------------------------------------------------------------

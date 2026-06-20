@@ -40,7 +40,7 @@ ORDER BY v.IdVenta;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #3 - Registrar proveedores y mantener sus datos de contacto
+-- #3 - Registrar y administrar proveedores
 
 -- Prueba de registro de proveedor nuevo.
 EXEC sp_registrarProveedor
@@ -60,12 +60,16 @@ EXEC sp_registrarProveedor
     @Direccion = 'Av. Santa Fe 4567, CABA';
 
 GO
--- Prueba de actualizacion de datos de contacto.
-EXEC sp_actualizarContactoProveedor
+
+-- Prueba de actualizacion de proveedor.
+EXEC sp_actualizarProveedor
     @IdProveedor = 3,
-    @Email = 'proveedores@modaNuevax.com',
+    @RazonSocial = 'Moda Nueva SRL Actualizada',
+    @CUIT = '30-12345678-3',
+    @Email = 'proveedores@modaNueva.com',
     @Telefono = '1144556677',
-    @Direccion = 'Av. Cabildo 1234, CABA';
+    @Direccion = 'Av. Cabildo 1234, CABA',
+    @Activo = 1;
 GO
 
 -- Consulta para verificar los datos del proveedor
