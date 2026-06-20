@@ -13,7 +13,11 @@ namespace TiendaIndumentaria.App
         Venta,
         Proveedor,
         Cliente,
-        Empleado
+        Empleado,
+        Categoria,
+        Talle,
+        Marca,
+        Color
     }
 
     public class FormRegistro : Form
@@ -193,6 +197,33 @@ namespace TiendaIndumentaria.App
                 return;
             }
 
+            if (_tipoRegistro == TipoRegistro.Talle)
+            {
+                if (_modoEdicion)
+                    ActualizarTalle();
+                else
+                    RegistrarTalle();
+                return;
+            }
+
+            if (_tipoRegistro == TipoRegistro.Marca)
+            {
+                if (_modoEdicion)
+                    ActualizarMarca();
+                else
+                    RegistrarMarca();
+                return;
+            }
+
+            if (_tipoRegistro == TipoRegistro.Color)
+            {
+                if (_modoEdicion)
+                    ActualizarColor();
+                else
+                    RegistrarColor();
+                return;
+            }
+
             ConfirmarSinPersistir();
         }
 
@@ -267,6 +298,97 @@ namespace TiendaIndumentaria.App
             });
         }
 
+        private void RegistrarTalle()
+        {
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Talle_Registrar",
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Descripcion", ValorOpcional("Descripcion")));
+
+                MensajeResultado = "Talle registrado correctamente.";
+            });
+        }
+
+        private void ActualizarTalle()
+        {
+            if (!_idRegistro.HasValue)
+                return;
+
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Talle_Actualizar",
+                    ("@IdTalle", _idRegistro.Value),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Descripcion", ValorOpcional("Descripcion")),
+                    ("@Activo", _activoInicial));
+
+                MensajeResultado = "Talle actualizado correctamente.";
+            });
+        }
+
+        private void RegistrarMarca()
+        {
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Marca_Registrar",
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Descripcion", ValorOpcional("Descripcion")));
+
+                MensajeResultado = "Marca registrada correctamente.";
+            });
+        }
+
+        private void ActualizarMarca()
+        {
+            if (!_idRegistro.HasValue)
+                return;
+
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Marca_Actualizar",
+                    ("@IdMarca", _idRegistro.Value),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Descripcion", ValorOpcional("Descripcion")),
+                    ("@Activo", _activoInicial));
+
+                MensajeResultado = "Marca actualizada correctamente.";
+            });
+        }
+
+        private void RegistrarColor()
+        {
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Color_Registrar",
+                    ("@Nombre", ValorCampo("Nombre")));
+
+                MensajeResultado = "Color registrado correctamente.";
+            });
+        }
+
+        private void ActualizarColor()
+        {
+            if (!_idRegistro.HasValue)
+                return;
+
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Color_Actualizar",
+                    ("@IdColor", _idRegistro.Value),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Activo", _activoInicial));
+
+                MensajeResultado = "Color actualizado correctamente.";
+            });
+        }
+
         private void ConfirmarSinPersistir()
         {
             MensajeResultado = $"Formulario de {NombreRegistro()} cargado. No se guardo en la base de datos.";
@@ -296,7 +418,12 @@ namespace TiendaIndumentaria.App
         {
             foreach ((string clave, TextBox texto) in _campos)
             {
-                if (clave == "Comprobante" || clave == "Email" || clave == "Telefono" || clave == "Direccion" || clave == "Total")
+                if (clave == "Comprobante" ||
+                    clave == "Descripcion" ||
+                    clave == "Email" ||
+                    clave == "Telefono" ||
+                    clave == "Direccion" ||
+                    clave == "Total")
                     continue;
 
                 if (string.IsNullOrWhiteSpace(texto.Text))
@@ -440,6 +567,21 @@ namespace TiendaIndumentaria.App
                         ("Telefono", "Telefono", false)
                     };
 
+                case TipoRegistro.Categoria:
+                case TipoRegistro.Talle:
+                case TipoRegistro.Marca:
+                    return new[]
+                    {
+                        ("Nombre", "Nombre", false),
+                        ("Descripcion", "Descripcion", false)
+                    };
+
+                case TipoRegistro.Color:
+                    return new[]
+                    {
+                        ("Nombre", "Nombre", false)
+                    };
+
                 default:
                     return Array.Empty<(string Clave, string Etiqueta, bool SoloLectura)>();
             }
@@ -464,6 +606,14 @@ namespace TiendaIndumentaria.App
                     return "proveedor";
                 case TipoRegistro.Cliente:
                     return "cliente";
+                case TipoRegistro.Categoria:
+                    return "categoria";
+                case TipoRegistro.Talle:
+                    return "talle";
+                case TipoRegistro.Marca:
+                    return "marca";
+                case TipoRegistro.Color:
+                    return "color";
                 default:
                     return "empleado";
             }

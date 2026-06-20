@@ -14,13 +14,18 @@ namespace TiendaIndumentaria.App
             @"TrustServerCertificate=True;";
 
     
-        public static DataTable EjecutarConsulta(string sql)
+        public static DataTable EjecutarConsulta(
+            string sql,
+            params (string Nombre, object? Valor)[] parametros)
         {
             var tabla = new DataTable();
             using (var conexion = new SqlConnection(CadenaConexion))
             using (var comando = new SqlCommand(sql, conexion))
             using (var adaptador = new SqlDataAdapter(comando))
             {
+                foreach (var (nombre, valor) in parametros)
+                    comando.Parameters.AddWithValue(nombre, valor ?? DBNull.Value);
+
                 adaptador.Fill(tabla);
             }
             return tabla;
@@ -42,21 +47,6 @@ namespace TiendaIndumentaria.App
                     adaptador.Fill(tabla);
             }
             return tabla;
-        }
-
-        public static int EjecutarComando(
-            string sql,
-            params (string Nombre, object? Valor)[] parametros)
-        {
-            using (var conexion = new SqlConnection(CadenaConexion))
-            using (var comando = new SqlCommand(sql, conexion))
-            {
-                foreach (var (nombre, valor) in parametros)
-                    comando.Parameters.AddWithValue(nombre, valor ?? DBNull.Value);
-
-                conexion.Open();
-                return comando.ExecuteNonQuery();
-            }
         }
 
         public static void ProbarConexion()

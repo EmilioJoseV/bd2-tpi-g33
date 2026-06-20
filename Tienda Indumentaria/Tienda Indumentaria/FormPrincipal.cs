@@ -167,9 +167,25 @@ namespace TiendaIndumentaria.App
             consultas.DropDownItems.Add(CrearItemMenu("Ventas", () => SeleccionarApartado("Ventas")));
             consultas.DropDownItems.Add(CrearItemMenu("Compras", () => SeleccionarApartado("Compras")));
 
+            var configuracion = new ToolStripMenuItem("Configuracion");
+            var nuevaCategoria = new ToolStripMenuItem("Nueva categoria")
+            {
+                Enabled = false
+            };
+            configuracion.DropDownItems.Add(nuevaCategoria);
+            configuracion.DropDownItems.Add(CrearItemMenu("Nuevo talle", () => AbrirFormularioRegistro(TipoRegistro.Talle)));
+            configuracion.DropDownItems.Add(CrearItemMenu("Nueva marca", () => AbrirFormularioRegistro(TipoRegistro.Marca)));
+            configuracion.DropDownItems.Add(CrearItemMenu("Nuevo color", () => AbrirFormularioRegistro(TipoRegistro.Color)));
+            configuracion.DropDownItems.Add(new ToolStripSeparator());
+            configuracion.DropDownItems.Add(CrearItemMenu("Ver categorias", () => SeleccionarApartado("Categorias")));
+            configuracion.DropDownItems.Add(CrearItemMenu("Ver talles", () => SeleccionarApartado("Talles")));
+            configuracion.DropDownItems.Add(CrearItemMenu("Ver marcas", () => SeleccionarApartado("Marcas")));
+            configuracion.DropDownItems.Add(CrearItemMenu("Ver colores", () => SeleccionarApartado("Colores")));
+
             menu.Items.Add(operaciones);
             menu.Items.Add(registros);
             menu.Items.Add(consultas);
+            menu.Items.Add(configuracion);
             return menu;
         }
 
@@ -224,6 +240,34 @@ namespace TiendaIndumentaria.App
                 "Productos",
                 "IdProducto",
                 null));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Categorias",
+                "SELECT IdCategoria, Nombre, Descripcion, Activo FROM Categorias ORDER BY Nombre",
+                "Categorias",
+                "IdCategoria",
+                TipoRegistro.Categoria));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Talles",
+                "SELECT IdTalle, Nombre, Descripcion, Activo FROM Talles ORDER BY Nombre",
+                "Talles",
+                "IdTalle",
+                TipoRegistro.Talle));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Marcas",
+                "SELECT IdMarca, Nombre, Descripcion, Activo FROM Marcas ORDER BY Nombre",
+                "Marcas",
+                "IdMarca",
+                TipoRegistro.Marca));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Colores",
+                "SELECT IdColor, Nombre, Activo FROM Colores ORDER BY Nombre",
+                "Colores",
+                "IdColor",
+                TipoRegistro.Color));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Ventas",
@@ -292,7 +336,11 @@ namespace TiendaIndumentaria.App
         private bool PermiteGestionarSeleccion()
         {
             TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
-            return tipo == TipoRegistro.Proveedor || tipo == TipoRegistro.Empleado;
+            return tipo == TipoRegistro.Proveedor ||
+                tipo == TipoRegistro.Empleado ||
+                tipo == TipoRegistro.Talle ||
+                tipo == TipoRegistro.Marca ||
+                tipo == TipoRegistro.Color;
         }
 
         private void ActualizarMenuGestionSeleccion()
@@ -340,7 +388,7 @@ namespace TiendaIndumentaria.App
             if (!TryObtenerIdSeleccionado(opcion, out int idRegistro))
                 return;
 
-            string entidad = opcion.TipoRegistro == TipoRegistro.Proveedor ? "proveedor" : "empleado";
+            string entidad = NombreEntidad(opcion.TipoRegistro);
             bool estaActivo = ObtenerActivo(_filaSeleccionada);
             string accion = estaActivo ? "inactivar" : "activar";
             var confirmacion = MessageBox.Show(
@@ -354,20 +402,7 @@ namespace TiendaIndumentaria.App
 
             EjecutarOperacion(() =>
             {
-                if (opcion.TipoRegistro == TipoRegistro.Proveedor)
-                {
-                    Conexion.EjecutarComando(
-                        "UPDATE Proveedores SET Activo = @Activo WHERE IdProveedor = @IdProveedor",
-                        ("@Activo", !estaActivo),
-                        ("@IdProveedor", idRegistro));
-                }
-                else
-                {
-                    Conexion.EjecutarComando(
-                        "UPDATE Empleados SET Activo = @Activo WHERE IdEmpleado = @IdEmpleado",
-                        ("@Activo", !estaActivo),
-                        ("@IdEmpleado", idRegistro));
-                }
+                CambiarEstado(opcion.TipoRegistro, idRegistro, estaActivo);
 
                 RefrescarConsultaActual($"{MayusculaInicial(entidad)} {(estaActivo ? "inactivado" : "activado")} correctamente.");
             });
@@ -416,6 +451,14 @@ namespace TiendaIndumentaria.App
                     return "Proveedores";
                 case TipoRegistro.Empleado:
                     return "Empleados";
+                case TipoRegistro.Categoria:
+                    return "Categorias";
+                case TipoRegistro.Talle:
+                    return "Talles";
+                case TipoRegistro.Marca:
+                    return "Marcas";
+                case TipoRegistro.Color:
+                    return "Colores";
                 default:
                     return "Clientes";
             }
@@ -474,6 +517,23 @@ namespace TiendaIndumentaria.App
                 };
             }
 
+            if (tipoRegistro == TipoRegistro.Talle || tipoRegistro == TipoRegistro.Marca)
+            {
+                return new Dictionary<string, string>
+                {
+                    ["Nombre"] = Texto(fila, "Nombre"),
+                    ["Descripcion"] = Texto(fila, "Descripcion")
+                };
+            }
+
+            if (tipoRegistro == TipoRegistro.Color || tipoRegistro == TipoRegistro.Categoria)
+            {
+                return new Dictionary<string, string>
+                {
+                    ["Nombre"] = Texto(fila, "Nombre")
+                };
+            }
+
             return new Dictionary<string, string>
             {
                 ["Apellido"] = Texto(fila, "Apellido"),
@@ -510,6 +570,61 @@ namespace TiendaIndumentaria.App
                 return texto;
 
             return char.ToUpperInvariant(texto[0]) + texto.Substring(1);
+        }
+
+        private static string NombreEntidad(TipoRegistro? tipoRegistro)
+        {
+            switch (tipoRegistro)
+            {
+                case TipoRegistro.Proveedor:
+                    return "proveedor";
+                case TipoRegistro.Empleado:
+                    return "empleado";
+                case TipoRegistro.Talle:
+                    return "talle";
+                case TipoRegistro.Marca:
+                    return "marca";
+                case TipoRegistro.Color:
+                    return "color";
+                default:
+                    return "registro";
+            }
+        }
+
+        private static void CambiarEstado(TipoRegistro? tipoRegistro, int idRegistro, bool estaActivo)
+        {
+            switch (tipoRegistro)
+            {
+                case TipoRegistro.Proveedor:
+                    Conexion.EjecutarProcedimiento(
+                        estaActivo ? "dbo.SP_Proveedor_Desactivar" : "dbo.SP_Proveedor_Reactivar",
+                        ("@IdProveedor", idRegistro));
+                    break;
+
+                case TipoRegistro.Empleado:
+                    Conexion.EjecutarProcedimiento(
+                        estaActivo ? "dbo.SP_Empleado_Desactivar" : "dbo.SP_Empleado_Reactivar",
+                        ("@IdEmpleado", idRegistro));
+                    break;
+
+                case TipoRegistro.Talle:
+                    Conexion.EjecutarProcedimiento(
+                        estaActivo ? "dbo.SP_Talle_Desactivar" : "dbo.SP_Talle_Reactivar",
+                        ("@IdTalle", idRegistro));
+                    break;
+
+                case TipoRegistro.Marca:
+                    Conexion.EjecutarProcedimiento(
+                        estaActivo ? "dbo.SP_Marca_Desactivar" : "dbo.SP_Marca_Reactivar",
+                        ("@IdMarca", idRegistro));
+                    break;
+
+                case TipoRegistro.Color:
+                    Conexion.EjecutarProcedimiento(
+                        estaActivo ? "dbo.SP_Color_Desactivar" : "dbo.SP_Color_Reactivar",
+                        ("@IdColor", idRegistro));
+                    break;
+            }
         }
 
         private void EjecutarOperacion(Action operacion)
