@@ -33,12 +33,12 @@ del stock a lo largo de los datos registrados en el tiempo.
 ## Funcionalidades principales
 1. Clasificar los productos por categorías.
 2. Asociar cada venta con un medio de pago.
-3. Registrar y administrar productos de la tienda.
-4. Registrar proveedores y mantener sus datos de contacto.
-5. Registrar clientes para asociarlos a las ventas realizadas.
-6. Registrar empleados responsables de cargar compras, ventas y movimientos de stock.
-7. Registrar compras de mercadería realizadas a proveedores.
-8. Registrar ventas realizadas a clientes.
+3. Registrar y administrar proveedores.
+4. Registrar y administrar productos de la tienda.
+5. Registrar y administrar clientes para asociarlos a las ventas realizadas.
+6. Registrar y administrar empleados responsables de cargar compras, ventas y movimientos de stock.
+7. Registrar y administrar compras de mercadería realizadas a proveedores.
+8. Registrar y administrar ventas realizadas a clientes.
 9. Detallar los productos incluidos en cada compra y cada venta, indicando cantidad, precio unitario y subtotal.
 10. Registrar movimientos de stock por entradas, salidas o ajustes manuales.
 11. Validar operaciones críticas, como evitar ventas sin stock suficiente.
