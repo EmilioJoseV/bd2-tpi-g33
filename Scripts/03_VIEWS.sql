@@ -2,6 +2,34 @@ USE BD2_TPI_TIENDA_INDUMENTARIA;
 GO
 
 ------------------------------------------------------------------------------------------------
+-- #14 - Consultar el historial de movimientos de stock de cada producto
+-- vw_historialMovimientosStock: Mostrar los movimientos de stock del producto.
+
+CREATE VIEW vw_historialMovimientosStock
+AS
+SELECT
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre AS NombreProducto,
+    tms.Nombre AS TipoMovimiento,
+    e.Apellido + ', ' + e.Nombre AS Empleado,
+    CASE
+        WHEN ms.IdCompra IS NOT NULL THEN 'Compra'
+        WHEN ms.IdVenta IS NOT NULL THEN 'Venta'
+        ELSE 'Ajuste'
+    END AS OrigenMovimiento,
+    c.NumeroComprobante AS NumeroComprobanteCompra,
+    ms.FechaMovimiento,
+    ms.Cantidad,
+    ms.Motivo
+FROM MovimientosStock ms
+INNER JOIN Productos p ON p.IdProducto = ms.IdProducto
+INNER JOIN TiposMovimientoStock tms ON tms.IdTipoMovimientoStock = ms.IdTipoMovimientoStock
+LEFT JOIN Empleados e ON e.IdEmpleado = ms.IdEmpleado
+LEFT JOIN Compras c ON c.IdCompra = ms.IdCompra;
+GO
+
+------------------------------------------------------------------------------------------------
 -- #15 - Detectar productos cuyo stock se encuentra por debajo del minimo definido
 -- vw_productosStockBajoMinimo: muestra los productos que ya estan por debajo del minimo
 

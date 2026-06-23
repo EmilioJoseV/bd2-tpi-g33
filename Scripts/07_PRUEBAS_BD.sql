@@ -401,12 +401,21 @@ FROM Productos
 WHERE IdProducto = 4;
 ------------------------------------------------------------------------------------------------
 GO
+------------------------------------------------------------------------------------------------
+-- #14 - Consultar el historial de movimientos de stock de cada producto
+
+-- Ver el historial completo de movimientos del producto 1.
+SELECT *
+FROM vw_historialMovimientosStock
+WHERE IdProducto = 1
+ORDER BY FechaMovimiento, TipoMovimiento;
+GO
 
 ------------------------------------------------------------------------------------------------
 -- #15 - Detectar productos cuyo stock se encuentra por debajo del minimo definido
 
 -- Ver los productos que ya estan por debajo del minimo.
-SELECT IdProducto, CodigoProducto, Nombre, StockActual, StockMinimo, CantidadPorDebajoDelMinimo
+SELECT *
 FROM vw_productosStockBajoMinimo
 ORDER BY IdProducto;
 GO
