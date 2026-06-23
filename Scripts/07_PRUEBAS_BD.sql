@@ -448,3 +448,12 @@ GO
 EXEC sp_consultarCompras
     @IdProveedor = 1;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #18 - Obtener reportes de productos mas vendidos
+
+-- Ver el ranking de productos mas vendidos.
+SELECT *
+FROM vw_productosMasVendidos
+ORDER BY CantidadVendida DESC, TotalFacturado DESC, NombreProducto;
+GO

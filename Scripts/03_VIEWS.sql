@@ -46,3 +46,23 @@ FROM Productos p
 WHERE p.Activo = 1 --Siempre fijarnos en los productos activos
   AND p.StockActual < p.StockMinimo;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #18 - Obtener reportes de productos mas vendidos
+-- vw_productosMasVendidos: muestra cuales productos tuvieron mas salida.
+
+CREATE VIEW vw_productosMasVendidos
+AS
+SELECT
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre AS NombreProducto,
+    SUM(dv.Cantidad) AS CantidadVendida,
+    SUM(dv.Subtotal) AS TotalFacturado
+FROM DetalleVentas dv
+INNER JOIN Productos p ON p.IdProducto = dv.IdProducto
+GROUP BY
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre;
+GO
