@@ -475,3 +475,11 @@ SELECT *
 FROM vw_stockActualProductos
 ORDER BY StockActual, Nombre;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #21 - Calcular el valor total del inventario disponible
+
+-- Ver el valor total del inventario activo.
+SELECT *
+FROM vw_valorTotalInventarioDisponible;
+GO

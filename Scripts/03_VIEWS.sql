@@ -104,3 +104,14 @@ SELECT
 FROM Productos p
 WHERE p.Activo = 1;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #21 - Calcular el valor total del inventario disponible
+-- vw_valorTotalInventarioDisponible: suma el valor de todo el stock activo.
+
+CREATE VIEW vw_valorTotalInventarioDisponible
+AS
+SELECT
+    SUM(p.StockActual * p.PrecioVenta) AS ValorTotalInventarioDisponible
+FROM Productos p
+GO
