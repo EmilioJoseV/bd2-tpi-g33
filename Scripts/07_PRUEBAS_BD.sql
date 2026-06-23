@@ -434,3 +434,17 @@ EXEC sp_consultarVentas
     @IdCliente = 1,
     @IdMedioPago = 1;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #17 - Consultar compras realizadas por proveedor o período
+
+-- Prueba de compras por rango de fechas.
+EXEC sp_consultarCompras
+    @FechaDesde = '2026-01-01',
+    @FechaHasta = '2026-02-28';
+GO
+
+-- Prueba de compras de un proveedor puntual.
+EXEC sp_consultarCompras
+    @IdProveedor = 1;
+GO

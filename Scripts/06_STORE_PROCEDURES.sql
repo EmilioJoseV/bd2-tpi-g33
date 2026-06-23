@@ -1066,4 +1066,45 @@ BEGIN
     ORDER BY v.FechaVenta, v.IdVenta;
 END;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #17 - Consultar compras realizadas por proveedor o período
+-- sp_consultarCompras: filtra compras por proveedor y por fecha.
+
+CREATE PROCEDURE sp_consultarCompras
+    @FechaDesde DATE = NULL,
+    @FechaHasta DATE = NULL,
+    @IdProveedor INT = NULL
+AS
+BEGIN
+    IF @FechaDesde IS NOT NULL AND @FechaHasta IS NOT NULL AND @FechaDesde > @FechaHasta
+    BEGIN
+        PRINT 'Las fechas no cierran';
+        RETURN;
+    END
+
+    IF @IdProveedor IS NOT NULL AND @IdProveedor <= 0
+    BEGIN
+        PRINT 'El id de proveedor es invalido';
+        RETURN;
+    END
+
+    SELECT
+        c.IdCompra,
+        c.FechaCompra,
+        c.NumeroComprobante,
+        c.Total,
+        p.RazonSocial AS Proveedor,
+        e.Apellido + ', ' + e.Nombre AS Empleado,
+        ec.Nombre AS EstadoCompra
+    FROM Compras c
+    INNER JOIN Proveedores p ON p.IdProveedor = c.IdProveedor
+    INNER JOIN Empleados e ON e.IdEmpleado = c.IdEmpleado
+    INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+    WHERE (@FechaDesde IS NULL OR CAST(c.FechaCompra AS date) >= @FechaDesde)
+      AND (@FechaHasta IS NULL OR CAST(c.FechaCompra AS date) <= @FechaHasta)
+      AND (@IdProveedor IS NULL OR c.IdProveedor = @IdProveedor)
+    ORDER BY c.FechaCompra, c.IdCompra;
+END;
+GO
 ------------------------------------------------------------------------------------------------
