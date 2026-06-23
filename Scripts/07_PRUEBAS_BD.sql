@@ -457,3 +457,12 @@ SELECT *
 FROM vw_productosMasVendidos
 ORDER BY CantidadVendida DESC, TotalFacturado DESC, NombreProducto;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #19 - Obtener reportes de ventas mensuales
+
+-- Ver el resumen de ventas por mes.
+SELECT *
+FROM vw_ventasMensuales
+ORDER BY Anio, Mes;
+GO

@@ -66,3 +66,20 @@ GROUP BY
     p.CodigoProducto,
     p.Nombre;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #19 - Obtener reportes de ventas mensuales
+-- vw_ventasMensuales: resume cuantas ventas hubo por  año-mes y cuanto se facturo.
+
+CREATE VIEW vw_ventasMensuales
+AS
+SELECT
+    YEAR(v.FechaVenta) AS Anio,
+    MONTH(v.FechaVenta) AS Mes,
+    COUNT(*) AS CantidadVentas,
+    SUM(v.Total) AS TotalFacturado
+FROM Ventas v
+GROUP BY
+    YEAR(v.FechaVenta),
+    MONTH(v.FechaVenta);
+GO
