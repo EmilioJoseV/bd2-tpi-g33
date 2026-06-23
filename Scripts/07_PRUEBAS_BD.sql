@@ -401,3 +401,12 @@ FROM Productos
 WHERE IdProducto = 4;
 ------------------------------------------------------------------------------------------------
 GO
+
+------------------------------------------------------------------------------------------------
+-- #15 - Detectar productos cuyo stock se encuentra por debajo del minimo definido
+
+-- Ver los productos que ya estan por debajo del minimo.
+SELECT IdProducto, CodigoProducto, Nombre, StockActual, StockMinimo, CantidadPorDebajoDelMinimo
+FROM vw_productosStockBajoMinimo
+ORDER BY IdProducto;
+GO
