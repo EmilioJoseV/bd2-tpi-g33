@@ -419,3 +419,18 @@ SELECT *
 FROM vw_productosStockBajoMinimo
 ORDER BY IdProducto;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #16 - Consultar ventas realizadas por fecha, cliente, empleado o medio de pago
+
+-- Prueba de ventas por rango de fechas.
+EXEC sp_consultarVentas
+    @FechaDesde = '2026-01-01',
+    @FechaHasta = '2026-02-28';
+GO
+
+-- Prueba de ventas de un cliente con un medio de pago puntual.
+EXEC sp_consultarVentas
+    @IdCliente = 1,
+    @IdMedioPago = 1;
+GO
