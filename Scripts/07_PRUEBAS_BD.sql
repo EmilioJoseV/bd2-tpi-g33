@@ -466,3 +466,12 @@ SELECT *
 FROM vw_ventasMensuales
 ORDER BY Anio, Mes;
 GO
+
+------------------------------------------------------------------------------------------------
+-- #20 - Controlar el stock actual de cada producto
+
+-- Ver el stock actual de todos los productos activos.
+SELECT *
+FROM vw_stockActualProductos
+ORDER BY StockActual, Nombre;
+GO

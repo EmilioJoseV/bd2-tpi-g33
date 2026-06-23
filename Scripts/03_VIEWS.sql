@@ -83,3 +83,24 @@ GROUP BY
     YEAR(v.FechaVenta),
     MONTH(v.FechaVenta);
 GO
+
+------------------------------------------------------------------------------------------------
+-- #20 - Controlar el stock actual de cada producto
+-- vw_stockActualProductos: muestra el stock actual de todos los productos y si ya esta por debajo del minimo
+
+CREATE VIEW vw_stockActualProductos
+AS
+SELECT
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre,
+    p.StockActual,
+    p.StockMinimo,
+    p.StockActual - p.StockMinimo AS DiferenciaConMinimo,
+    CASE
+        WHEN p.StockActual < p.StockMinimo THEN 'Stock bajo'
+        ELSE 'OK'
+    END AS EstadoStock
+FROM Productos p
+WHERE p.Activo = 1;
+GO
