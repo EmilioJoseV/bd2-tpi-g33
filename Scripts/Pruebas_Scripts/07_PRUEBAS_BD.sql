@@ -43,7 +43,7 @@ GO
 -- #3 - Registrar proveedores y mantener sus datos de contacto
 
 -- Prueba de registro de proveedor nuevo.
-EXEC sp_registrarProveedor
+EXEC dbo.SP_Proveedor_Registrar
     @RazonSocial = 'Moda Nueva SRL',
     @CUIT = '30-12345678-3',
     @Email = 'contacto@modaNueva.com',
@@ -52,7 +52,7 @@ EXEC sp_registrarProveedor
 GO
 
 -- Prueba de validacion de CUIT repetido.
-EXEC sp_registrarProveedor
+EXEC dbo.SP_Proveedor_Registrar
     @RazonSocial = 'Moda Nuevaz SRL',
     @CUIT = '30-12345678-3',
     @Email = 'ventas@modaNuevaz.com',
@@ -61,7 +61,7 @@ EXEC sp_registrarProveedor
 
 GO
 -- Prueba de actualizacion de datos de contacto.
-EXEC sp_actualizarContactoProveedor
+EXEC dbo.SP_Proveedor_ActualizarContacto
     @IdProveedor = 3,
     @Email = 'proveedores@modaNuevax.com',
     @Telefono = '1144556677',
@@ -79,7 +79,7 @@ GO
 -- #5 - Registrar y administrar clientes
 
 -- Prueba de registro de cliente nuevo.
-EXEC sp_registrarCliente
+EXEC dbo.SP_Cliente_Registrar
     @Apellido = 'Doe Gomez',
     @Nombre = 'John Alexander',
     @Documento = '12345678',
@@ -88,7 +88,7 @@ EXEC sp_registrarCliente
 GO
 
 -- Prueba de validacion de documento repetido.
-EXEC sp_registrarCliente
+EXEC dbo.SP_Cliente_Registrar
     @Apellido = 'Polo',
     @Nombre = 'Marco',
     @Documento = '12345678',
@@ -97,7 +97,7 @@ EXEC sp_registrarCliente
 GO
 
 -- Prueba de actualizacion de cliente.
-EXEC sp_actualizarCliente
+EXEC dbo.SP_Cliente_Actualizar
     @IdCliente = 3,
     @Apellido = 'Doe',
     @Nombre = 'John',
@@ -118,7 +118,7 @@ GO
 -- #7 - Registrar compras de mercadería realizadas a proveedores
 
 -- Prueba de registro de compra nueva.
-EXEC sp_registrarCompra
+EXEC dbo.SP_Compra_Registrar
     @IdProveedor = 1,
     @IdEmpleado = 1,
     @NumeroComprobante = NULL,
@@ -126,7 +126,7 @@ EXEC sp_registrarCompra
 GO
 
 -- Prueba de registro de otra compra nueva.
-EXEC sp_registrarCompra
+EXEC dbo.SP_Compra_Registrar
     @IdProveedor = 1,
     @IdEmpleado = 1,
     @NumeroComprobante = 'COMP-0005',
@@ -134,7 +134,7 @@ EXEC sp_registrarCompra
 GO
 
 -- Prueba de actualizacion de compra para completar numero, cambiar estado y total.
-EXEC sp_actualizarCompra
+EXEC dbo.SP_Compra_Actualizar
     @IdCompra = 4,
     @IdProveedor = 1,
     @IdEmpleado = 1,
@@ -144,7 +144,7 @@ EXEC sp_actualizarCompra
 GO
 
 -- Prueba de validacion para no confirmar una compra sin detalle.
-EXEC sp_actualizarCompra
+EXEC dbo.SP_Compra_Actualizar
     @IdCompra = (
         SELECT TOP 1 IdCompra
         FROM Compras
@@ -176,7 +176,7 @@ WHERE IdVenta = 4;
 GO
 
 -- Prueba de alta de detalle de compra.
-EXEC sp_registrarDetalleCompra
+EXEC dbo.SP_DetalleCompra_Registrar
     @IdCompra = (
         SELECT TOP 1 IdCompra
         FROM Compras
@@ -189,7 +189,7 @@ EXEC sp_registrarDetalleCompra
 GO
 
 -- Prueba de alta de detalle de compra repitiendo el articulo.
-EXEC sp_registrarDetalleCompra
+EXEC dbo.SP_DetalleCompra_Registrar
     @IdCompra = (
         SELECT TOP 1 IdCompra
         FROM Compras
@@ -202,7 +202,7 @@ EXEC sp_registrarDetalleCompra
 GO
 
 -- Prueba de actualizacion de detalle de compra.
-EXEC sp_actualizarDetalleCompra
+EXEC dbo.SP_DetalleCompra_Actualizar
     @IdDetalleCompra = (
         SELECT TOP 1 IdDetalleCompra
         FROM DetalleCompras
@@ -221,7 +221,7 @@ EXEC sp_actualizarDetalleCompra
 GO
 
 -- Prueba de baja de detalle de compra.
-EXEC sp_eliminarDetalleCompra
+EXEC dbo.SP_DetalleCompra_Eliminar
     @IdDetalleCompra = (
         SELECT TOP 1 IdDetalleCompra
         FROM DetalleCompras
@@ -249,21 +249,21 @@ ORDER BY IdDetalleCompra;
 GO
 
 -- Prueba de alta de detalle de venta.
-EXEC sp_registrarDetalleVenta
+EXEC dbo.SP_DetalleVenta_Registrar
     @IdVenta = 4,
     @IdProducto = 1,
     @Cantidad = 1;
 GO
 
 -- Prueba de alta de detalle de venta repitiendo el articulo.
-EXEC sp_registrarDetalleVenta
+EXEC dbo.SP_DetalleVenta_Registrar
     @IdVenta = 4,
     @IdProducto = 1,
     @Cantidad = 2;
 GO
 
 -- Prueba de actualizacion de detalle de venta.
-EXEC sp_actualizarDetalleVenta
+EXEC dbo.SP_DetalleVenta_Actualizar
     @IdDetalleVenta = (
         SELECT TOP 1 IdDetalleVenta
         FROM DetalleVentas
@@ -276,7 +276,7 @@ EXEC sp_actualizarDetalleVenta
 GO
 
 -- Prueba de baja de detalle de venta.
-EXEC sp_eliminarDetalleVenta
+EXEC dbo.SP_DetalleVenta_Eliminar
     @IdDetalleVenta = (
         SELECT TOP 1 IdDetalleVenta
         FROM DetalleVentas
@@ -327,7 +327,7 @@ WHERE IdProducto = 1;
 GO
 
 -- Intentar tocar detalle de una compra confirmada.
-EXEC sp_registrarDetalleCompra
+EXEC dbo.SP_DetalleCompra_Registrar
     @IdCompra = (
         SELECT TOP 1 IdCompra
         FROM Compras
@@ -366,7 +366,7 @@ ORDER BY IdProducto;
 GO
 
 -- Intentar tocar detalle de una venta confirmada.
-EXEC sp_registrarDetalleVenta
+EXEC dbo.SP_DetalleVenta_Registrar
     @IdVenta = 4,
     @IdProducto = 2,
     @Cantidad = 1;
@@ -379,7 +379,7 @@ WHERE IdVenta = 4;
 GO
 
 -- Agregar un detalle grande para provocar falta de stock al confirmar.
-EXEC sp_registrarDetalleVenta
+EXEC dbo.SP_DetalleVenta_Registrar
     @IdVenta = 4,
     @IdProducto = 4,
     @Cantidad = 10;
@@ -402,7 +402,7 @@ GO
 
 -- Ver el historial completo de movimientos del producto 1.
 SELECT *
-FROM vw_historialMovimientosStock
+FROM dbo.VW_Producto_ConsultarHistorialStock
 WHERE IdProducto = 1
 ORDER BY FechaMovimiento, TipoMovimiento;
 GO
@@ -412,7 +412,7 @@ GO
 
 -- Ver los productos que ya estan por debajo del minimo.
 SELECT *
-FROM vw_productosStockBajoMinimo
+FROM dbo.VW_Producto_ConsultarStockBajoMinimo
 ORDER BY IdProducto;
 GO
 
@@ -420,13 +420,13 @@ GO
 -- #16 - Consultar ventas realizadas por fecha, cliente, empleado o medio de pago
 
 -- Prueba de ventas por rango de fechas.
-EXEC sp_consultarVentas
+EXEC dbo.SP_Venta_Consultar
     @FechaDesde = '2026-01-01',
     @FechaHasta = '2026-02-28';
 GO
 
 -- Prueba de ventas de un cliente con un medio de pago puntual.
-EXEC sp_consultarVentas
+EXEC dbo.SP_Venta_Consultar
     @IdCliente = 1,
     @IdMedioPago = 1;
 GO
@@ -435,13 +435,13 @@ GO
 -- #17 - Consultar compras realizadas por proveedor o período
 
 -- Prueba de compras por rango de fechas.
-EXEC sp_consultarCompras
+EXEC dbo.SP_Compra_Consultar
     @FechaDesde = '2026-01-01',
     @FechaHasta = '2026-02-28';
 GO
 
 -- Prueba de compras de un proveedor puntual.
-EXEC sp_consultarCompras
+EXEC dbo.SP_Compra_Consultar
     @IdProveedor = 1;
 GO
 
@@ -450,7 +450,7 @@ GO
 
 -- Ver el ranking de productos mas vendidos.
 SELECT *
-FROM vw_productosMasVendidos
+FROM dbo.VW_Producto_ConsultarMasVendido
 ORDER BY CantidadVendida DESC, TotalFacturado DESC, NombreProducto;
 GO
 
@@ -459,7 +459,7 @@ GO
 
 -- Ver el resumen de ventas por mes.
 SELECT *
-FROM vw_ventasMensuales
+FROM dbo.VW_Venta_ConsultarMensual
 ORDER BY Anio, Mes;
 GO
 
@@ -468,7 +468,7 @@ GO
 
 -- Ver el stock actual de todos los productos activos.
 SELECT *
-FROM vw_stockActualProductos
+FROM dbo.VW_Producto_ConsultarStockActual
 ORDER BY StockActual, Nombre;
 GO
 
@@ -477,5 +477,5 @@ GO
 
 -- Ver el valor total del inventario activo.
 SELECT *
-FROM vw_valorTotalInventarioDisponible;
+FROM dbo.VW_Inventario_ConsultarValorTotal;
 GO

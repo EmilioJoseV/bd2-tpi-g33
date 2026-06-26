@@ -11,3 +11,5 @@ GO
 :r .\06h_SP_DetalleCompras.sql
 :r .\06i_SP_DetalleVentas.sql
 :r .\06j_SP_Categorias.sql
+:r .\06k_SP_MovimientosStock.sql
+:r .\06l_SP_Ventas.sql

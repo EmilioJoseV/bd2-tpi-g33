@@ -3,9 +3,13 @@ GO
 
 ------------------------------------------------------------------------------------------------
 -- #14 - Consultar el historial de movimientos de stock de cada producto
--- vw_historialMovimientosStock: Mostrar los movimientos de stock del producto.
+-- VW_Producto_ConsultarHistorialStock: Mostrar los movimientos de stock del producto.
 
-CREATE VIEW vw_historialMovimientosStock
+IF OBJECT_ID(N'dbo.VW_Producto_ConsultarHistorialStock', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Producto_ConsultarHistorialStock;
+GO
+
+CREATE VIEW dbo.VW_Producto_ConsultarHistorialStock
 AS
 SELECT
     p.IdProducto,
@@ -31,9 +35,13 @@ GO
 
 ------------------------------------------------------------------------------------------------
 -- #15 - Detectar productos cuyo stock se encuentra por debajo del minimo definido
--- vw_productosStockBajoMinimo: muestra los productos que ya estan por debajo del minimo
+-- VW_Producto_ConsultarStockBajoMinimo: muestra los productos que ya estan por debajo del minimo
 
-CREATE VIEW vw_productosStockBajoMinimo
+IF OBJECT_ID(N'dbo.VW_Producto_ConsultarStockBajoMinimo', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Producto_ConsultarStockBajoMinimo;
+GO
+
+CREATE VIEW dbo.VW_Producto_ConsultarStockBajoMinimo
 AS
 SELECT
     p.IdProducto,
@@ -49,9 +57,13 @@ GO
 
 ------------------------------------------------------------------------------------------------
 -- #18 - Obtener reportes de productos mas vendidos
--- vw_productosMasVendidos: muestra cuales productos tuvieron mas salida.
+-- VW_Producto_ConsultarMasVendido: muestra cuales productos tuvieron mas salida.
 
-CREATE VIEW vw_productosMasVendidos
+IF OBJECT_ID(N'dbo.VW_Producto_ConsultarMasVendido', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Producto_ConsultarMasVendido;
+GO
+
+CREATE VIEW dbo.VW_Producto_ConsultarMasVendido
 AS
 SELECT
     p.IdProducto,
@@ -69,9 +81,13 @@ GO
 
 ------------------------------------------------------------------------------------------------
 -- #19 - Obtener reportes de ventas mensuales
--- vw_ventasMensuales: resume cuantas ventas hubo por  año-mes y cuanto se facturo.
+-- VW_Venta_ConsultarMensual: resume cuantas ventas hubo por año-mes y cuanto se facturo.
 
-CREATE VIEW vw_ventasMensuales
+IF OBJECT_ID(N'dbo.VW_Venta_ConsultarMensual', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Venta_ConsultarMensual;
+GO
+
+CREATE VIEW dbo.VW_Venta_ConsultarMensual
 AS
 SELECT
     YEAR(v.FechaVenta) AS Anio,
@@ -86,9 +102,13 @@ GO
 
 ------------------------------------------------------------------------------------------------
 -- #20 - Controlar el stock actual de cada producto
--- vw_stockActualProductos: muestra el stock actual de todos los productos y si ya esta por debajo del minimo
+-- VW_Producto_ConsultarStockActual: muestra el stock actual de todos los productos y si ya esta por debajo del minimo
 
-CREATE VIEW vw_stockActualProductos
+IF OBJECT_ID(N'dbo.VW_Producto_ConsultarStockActual', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Producto_ConsultarStockActual;
+GO
+
+CREATE VIEW dbo.VW_Producto_ConsultarStockActual
 AS
 SELECT
     p.IdProducto,
@@ -107,9 +127,13 @@ GO
 
 ------------------------------------------------------------------------------------------------
 -- #21 - Calcular el valor total del inventario disponible
--- vw_valorTotalInventarioDisponible: suma el valor de todo el stock activo.
+-- VW_Inventario_ConsultarValorTotal: suma el valor de todo el stock activo.
 
-CREATE VIEW vw_valorTotalInventarioDisponible
+IF OBJECT_ID(N'dbo.VW_Inventario_ConsultarValorTotal', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Inventario_ConsultarValorTotal;
+GO
+
+CREATE VIEW dbo.VW_Inventario_ConsultarValorTotal
 AS
 SELECT
     SUM(p.StockActual * p.PrecioVenta) AS ValorTotalInventarioDisponible
