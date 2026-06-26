@@ -1,3 +1,5 @@
+IF OBJECT_ID(N'dbo.sp_registrarMovimientoStock', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_registrarMovimientoStock;
 GO
 
 CREATE PROCEDURE sp_registrarMovimientoStock
@@ -148,6 +150,10 @@ BEGIN
 END;
 GO
 
+IF OBJECT_ID(N'dbo.trg_registrarMovimientoStockCompra', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.trg_registrarMovimientoStockCompra;
+GO
+
 CREATE TRIGGER trg_registrarMovimientoStockCompra
 ON Compras
 AFTER UPDATE
@@ -192,6 +198,10 @@ BEGIN
       AND UPPER(ecAnt.Nombre) <> 'CONFIRMADA'
       AND UPPER(ecNvo.Nombre)  = 'CONFIRMADA';
 END;
+GO
+
+IF OBJECT_ID(N'dbo.trg_registrarMovimientoStockVenta', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.trg_registrarMovimientoStockVenta;
 GO
 
 

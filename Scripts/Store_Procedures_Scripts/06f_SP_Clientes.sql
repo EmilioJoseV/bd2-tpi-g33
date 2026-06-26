@@ -1,6 +1,10 @@
 -- Clientes
 
 -- sp_registrarCliente: da de alta un cliente y valida que el documento no se repita.
+IF OBJECT_ID(N'dbo.sp_registrarCliente', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_registrarCliente;
+GO
+
 CREATE PROCEDURE sp_registrarCliente
     @Apellido VARCHAR(100),
     @Nombre VARCHAR(100),
@@ -58,6 +62,10 @@ END;
 GO
 
 -- sp_actualizarCliente: actualiza los datos principales de un cliente existente.
+IF OBJECT_ID(N'dbo.sp_actualizarCliente', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_actualizarCliente;
+GO
+
 CREATE PROCEDURE sp_actualizarCliente
     @IdCliente INT,
     @Apellido VARCHAR(100),

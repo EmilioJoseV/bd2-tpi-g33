@@ -1,6 +1,10 @@
 -- Detalle de ventas
 
 -- sp_registrarDetalleVenta: agrega un registro de detalle a una venta.
+IF OBJECT_ID(N'dbo.sp_registrarDetalleVenta', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_registrarDetalleVenta;
+GO
+
 CREATE PROCEDURE sp_registrarDetalleVenta
     @IdVenta INT,
     @IdProducto INT,
@@ -94,6 +98,10 @@ END;
 GO
 
 -- sp_actualizarDetalleVenta: actualiza un registro de detalle de venta.
+IF OBJECT_ID(N'dbo.sp_actualizarDetalleVenta', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_actualizarDetalleVenta;
+GO
+
 CREATE PROCEDURE sp_actualizarDetalleVenta
     @IdDetalleVenta INT,
     @IdProducto INT,
@@ -195,6 +203,10 @@ END;
 GO
 
 -- sp_eliminarDetalleVenta: elimina una linea de detalle de venta.
+IF OBJECT_ID(N'dbo.sp_eliminarDetalleVenta', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_eliminarDetalleVenta;
+GO
+
 CREATE PROCEDURE sp_eliminarDetalleVenta
     @IdDetalleVenta INT
 AS

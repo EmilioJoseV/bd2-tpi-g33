@@ -5,6 +5,10 @@ GO
 -- #13 - Disminuir automáticamente el stock cuando se registra una venta a un cliente
 -- trg_actualizarStockPorEstadoVenta: toca el stock si la venta pasa a confirmada o deja de estarlo.
 
+IF OBJECT_ID(N'dbo.trg_actualizarStockPorEstadoVenta', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.trg_actualizarStockPorEstadoVenta;
+GO
+
 CREATE TRIGGER trg_actualizarStockPorEstadoVenta
 ON Ventas
 AFTER UPDATE
@@ -93,6 +97,10 @@ END;
 GO
 
 -- trg_actualizarStockPorEstadoCompra: toca el stock si la compra pasa a confirmada o deja de estarlo.
+
+IF OBJECT_ID(N'dbo.trg_actualizarStockPorEstadoCompra', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.trg_actualizarStockPorEstadoCompra;
+GO
 
 CREATE TRIGGER trg_actualizarStockPorEstadoCompra
 ON Compras
