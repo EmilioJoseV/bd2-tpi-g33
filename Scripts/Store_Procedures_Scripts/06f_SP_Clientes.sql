@@ -1,11 +1,11 @@
 -- Clientes
 
--- sp_registrarCliente: da de alta un cliente y valida que el documento no se repita.
-IF OBJECT_ID(N'dbo.sp_registrarCliente', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_registrarCliente;
+-- SP_Cliente_Registrar: da de alta un cliente y valida que el documento no se repita.
+IF OBJECT_ID(N'dbo.SP_Cliente_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Cliente_Registrar;
 GO
 
-CREATE PROCEDURE sp_registrarCliente
+CREATE PROCEDURE dbo.SP_Cliente_Registrar
     @Apellido VARCHAR(100),
     @Nombre VARCHAR(100),
     @Documento VARCHAR(20),
@@ -61,12 +61,12 @@ BEGIN
 END;
 GO
 
--- sp_actualizarCliente: actualiza los datos principales de un cliente existente.
-IF OBJECT_ID(N'dbo.sp_actualizarCliente', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_actualizarCliente;
+-- SP_Cliente_Actualizar: actualiza los datos principales de un cliente existente.
+IF OBJECT_ID(N'dbo.SP_Cliente_Actualizar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Cliente_Actualizar;
 GO
 
-CREATE PROCEDURE sp_actualizarCliente
+CREATE PROCEDURE dbo.SP_Cliente_Actualizar
     @IdCliente INT,
     @Apellido VARCHAR(100),
     @Nombre VARCHAR(100),

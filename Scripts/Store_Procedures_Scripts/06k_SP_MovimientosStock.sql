@@ -1,8 +1,8 @@
-IF OBJECT_ID(N'dbo.sp_registrarMovimientoStock', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_registrarMovimientoStock;
+IF OBJECT_ID(N'dbo.SP_MovimientoStock_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_MovimientoStock_Registrar;
 GO
 
-CREATE PROCEDURE sp_registrarMovimientoStock
+CREATE PROCEDURE dbo.SP_MovimientoStock_Registrar
     @IdProducto            INT,
     @IdTipoMovimientoStock INT,
     @IdEmpleado            INT,
@@ -150,11 +150,11 @@ BEGIN
 END;
 GO
 
-IF OBJECT_ID(N'dbo.trg_registrarMovimientoStockCompra', N'TR') IS NOT NULL
-    DROP TRIGGER dbo.trg_registrarMovimientoStockCompra;
+IF OBJECT_ID(N'dbo.TRG_Compra_RegistrarMovimientoStock', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.TRG_Compra_RegistrarMovimientoStock;
 GO
 
-CREATE TRIGGER trg_registrarMovimientoStockCompra
+CREATE TRIGGER dbo.TRG_Compra_RegistrarMovimientoStock
 ON Compras
 AFTER UPDATE
 AS
@@ -200,12 +200,12 @@ BEGIN
 END;
 GO
 
-IF OBJECT_ID(N'dbo.trg_registrarMovimientoStockVenta', N'TR') IS NOT NULL
-    DROP TRIGGER dbo.trg_registrarMovimientoStockVenta;
+IF OBJECT_ID(N'dbo.TRG_Venta_RegistrarMovimientoStock', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock;
 GO
 
 
-CREATE TRIGGER trg_registrarMovimientoStockVenta
+CREATE TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock
 ON Ventas
 AFTER UPDATE
 AS

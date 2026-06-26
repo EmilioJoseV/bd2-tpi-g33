@@ -1,11 +1,11 @@
 -- Ventas
--- sp_consultarVentas: filtra ventas por fecha y por los datos que se quieran pasar.
+-- SP_Venta_Consultar: filtra ventas por fecha y por los datos que se quieran pasar.
 
-IF OBJECT_ID(N'dbo.sp_consultarVentas', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_consultarVentas;
+IF OBJECT_ID(N'dbo.SP_Venta_Consultar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Venta_Consultar;
 GO
 
-CREATE PROCEDURE sp_consultarVentas
+CREATE PROCEDURE dbo.SP_Venta_Consultar
     @FechaDesde DATE = NULL,
     @FechaHasta DATE = NULL,
     @IdCliente INT = NULL,
