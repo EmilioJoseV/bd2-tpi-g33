@@ -152,13 +152,18 @@ namespace TiendaIndumentaria.App
             registros.DropDownItems.Add(CrearItemMenu("Nuevo proveedor", () => AbrirFormularioRegistro(TipoRegistro.Proveedor)));
             registros.DropDownItems.Add(CrearItemMenu("Nuevo cliente", () => AbrirFormularioRegistro(TipoRegistro.Cliente)));
             registros.DropDownItems.Add(CrearItemMenu("Nuevo empleado", () => AbrirFormularioRegistro(TipoRegistro.Empleado)));
-            registros.DropDownItems.Add(CrearItemMenu("Nuevo producto", () => AbrirFormularioRegistro(TipoRegistro.Producto)));
             registros.DropDownItems.Add(new ToolStripSeparator());
             _menuPrincipalEditar = CrearItemMenu("Editar seleccionado", EditarRegistroSeleccionado);
             _menuPrincipalCambiarEstado = CrearItemMenu("Activar/Inactivar seleccionado", CambiarEstadoRegistroSeleccionado);
             registros.DropDownItems.Add(_menuPrincipalEditar);
             registros.DropDownItems.Add(_menuPrincipalCambiarEstado);
             registros.DropDownOpening += (_, _) => ActualizarMenuGestionSeleccion();
+
+            var productos = new ToolStripMenuItem("Productos");
+            productos.DropDownItems.Add(CrearItemMenu("Nuevo producto", () => AbrirFormularioRegistro(TipoRegistro.Producto)));
+            productos.DropDownItems.Add(CrearItemMenu("Ajustar stock", AbrirFormularioAjusteStock));
+            productos.DropDownItems.Add(new ToolStripSeparator());
+            productos.DropDownItems.Add(CrearItemMenu("Ver productos", () => SeleccionarApartado("Productos")));
 
             var consultas = new ToolStripMenuItem("Consultas");
             consultas.DropDownItems.Add(CrearItemMenu("Proveedores", () => SeleccionarApartado("Proveedores")));
@@ -181,6 +186,7 @@ namespace TiendaIndumentaria.App
 
             menu.Items.Add(operaciones);
             menu.Items.Add(registros);
+            menu.Items.Add(productos);
             menu.Items.Add(consultas);
             menu.Items.Add(configuracion);
             return menu;
@@ -422,6 +428,18 @@ namespace TiendaIndumentaria.App
                 }
 
                 SeleccionarApartado(EntidadParaRegistro(tipoRegistro));
+                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+            }
+        }
+
+        private void AbrirFormularioAjusteStock()
+        {
+            using (var formulario = new FormAjusteStock())
+            {
+                if (formulario.ShowDialog(this) != DialogResult.OK || formulario.Resultado == null)
+                    return;
+
+                SeleccionarApartado("Productos");
                 MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
             }
         }
