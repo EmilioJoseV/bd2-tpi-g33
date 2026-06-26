@@ -43,7 +43,7 @@ GO
 -- #3 - Registrar proveedores y mantener sus datos de contacto
 
 -- Prueba de registro de proveedor nuevo.
-EXEC sp_registrarProveedor
+EXEC dbo.SP_Proveedor_Registrar
     @RazonSocial = 'Moda Nueva SRL',
     @CUIT = '30-12345678-3',
     @Email = 'contacto@modaNueva.com',
@@ -52,7 +52,7 @@ EXEC sp_registrarProveedor
 GO
 
 -- Prueba de validacion de CUIT repetido.
-EXEC sp_registrarProveedor
+EXEC dbo.SP_Proveedor_Registrar
     @RazonSocial = 'Moda Nuevaz SRL',
     @CUIT = '30-12345678-3',
     @Email = 'ventas@modaNuevaz.com',
@@ -61,7 +61,7 @@ EXEC sp_registrarProveedor
 
 GO
 -- Prueba de actualizacion de datos de contacto.
-EXEC sp_actualizarContactoProveedor
+EXEC dbo.SP_Proveedor_ActualizarContacto
     @IdProveedor = 3,
     @Email = 'proveedores@modaNuevax.com',
     @Telefono = '1144556677',
