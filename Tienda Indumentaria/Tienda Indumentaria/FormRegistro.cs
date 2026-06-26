@@ -14,6 +14,7 @@ namespace TiendaIndumentaria.App
         Proveedor,
         Cliente,
         Empleado,
+        Producto,
         Categoria,
         Talle,
         Marca,
@@ -28,6 +29,7 @@ namespace TiendaIndumentaria.App
         private readonly bool _activoInicial;
         private readonly IReadOnlyDictionary<string, string> _valoresIniciales;
         private readonly Dictionary<string, TextBox> _campos = new Dictionary<string, TextBox>();
+        private readonly Dictionary<string, ComboBox> _listas = new Dictionary<string, ComboBox>();
         private TextBox? _textoTotal;
         private Button _botonConfirmar = null!;
         private Button _botonCancelar = null!;
@@ -132,6 +134,23 @@ namespace TiendaIndumentaria.App
             string etiqueta,
             bool soloLectura)
         {
+            if (EsCampoLista(clave))
+            {
+                var lista = new ComboBox
+                {
+                    Dock = DockStyle.Fill,
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Margin = new Padding(0, 4, 0, 4)
+                };
+
+                CargarLista(lista, clave);
+
+                contenedor.Controls.Add(CrearEtiquetaCampo(etiqueta, EsCampoObligatorio(clave)), 0, fila);
+                contenedor.Controls.Add(lista, 1, fila);
+                _listas[clave] = lista;
+                return;
+            }
+
             var texto = new TextBox
             {
                 Dock = DockStyle.Fill,
@@ -191,7 +210,16 @@ namespace TiendaIndumentaria.App
             foreach ((string clave, string valor) in _valoresIniciales)
             {
                 if (_campos.TryGetValue(clave, out TextBox? texto))
+                {
                     texto.Text = valor;
+                    continue;
+                }
+
+                if (_listas.TryGetValue(clave, out ComboBox? lista) &&
+                    int.TryParse(valor, out int idSeleccionado))
+                {
+                    lista.SelectedValue = idSeleccionado;
+                }
             }
         }
 
@@ -221,6 +249,15 @@ namespace TiendaIndumentaria.App
                     ActualizarEmpleado();
                 else
                     RegistrarEmpleado();
+                return;
+            }
+
+            if (_tipoRegistro == TipoRegistro.Producto)
+            {
+                if (_modoEdicion)
+                    ActualizarProducto();
+                else
+                    RegistrarProducto();
                 return;
             }
 
@@ -331,6 +368,53 @@ namespace TiendaIndumentaria.App
                     ("@Activo", _activoInicial));
 
                 MensajeResultado = "Empleado actualizado correctamente.";
+            });
+        }
+
+        private void RegistrarProducto()
+        {
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Producto_Registrar",
+                    ("@IdCategoria", EnteroCampo("IdCategoria")),
+                    ("@IdMarca", EnteroCampo("IdMarca")),
+                    ("@IdTalle", EnteroCampo("IdTalle")),
+                    ("@IdColor", EnteroCampo("IdColor")),
+                    ("@CodigoProducto", ValorCampo("CodigoProducto")),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Descripcion", ValorOpcional("Descripcion")),
+                    ("@PrecioVenta", DecimalCampo("PrecioVenta")),
+                    ("@StockActual", EnteroCampo("StockActual")),
+                    ("@StockMinimo", EnteroCampo("StockMinimo")));
+
+                MensajeResultado = "Producto registrado correctamente.";
+            });
+        }
+
+        private void ActualizarProducto()
+        {
+            if (!_idRegistro.HasValue)
+                return;
+
+            EjecutarRegistro(() =>
+            {
+                Resultado = Conexion.EjecutarProcedimiento(
+                    "dbo.SP_Producto_Actualizar",
+                    ("@IdProducto", _idRegistro.Value),
+                    ("@IdCategoria", EnteroCampo("IdCategoria")),
+                    ("@IdMarca", EnteroCampo("IdMarca")),
+                    ("@IdTalle", EnteroCampo("IdTalle")),
+                    ("@IdColor", EnteroCampo("IdColor")),
+                    ("@CodigoProducto", ValorCampo("CodigoProducto")),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Descripcion", ValorOpcional("Descripcion")),
+                    ("@PrecioVenta", DecimalCampo("PrecioVenta")),
+                    ("@StockActual", EnteroCampo("StockActual")),
+                    ("@StockMinimo", EnteroCampo("StockMinimo")),
+                    ("@Activo", _activoInicial));
+
+                MensajeResultado = "Producto actualizado correctamente.";
             });
         }
 
@@ -510,6 +594,51 @@ namespace TiendaIndumentaria.App
                 }
             }
 
+            if (EsProducto())
+            {
+                if (!TryObtenerEntero("IdCategoria", "categoria", out int idCategoria) || idCategoria <= 0)
+                {
+                    MostrarDatoInvalido(_listas["IdCategoria"], "Seleccione una categoria valida.");
+                    return false;
+                }
+
+                if (!TryObtenerEntero("IdMarca", "marca", out int idMarca) || idMarca <= 0)
+                {
+                    MostrarDatoInvalido(_listas["IdMarca"], "Seleccione una marca valida.");
+                    return false;
+                }
+
+                if (!TryObtenerEntero("IdTalle", "talle", out int idTalle) || idTalle <= 0)
+                {
+                    MostrarDatoInvalido(_listas["IdTalle"], "Seleccione un talle valido.");
+                    return false;
+                }
+
+                if (!TryObtenerEntero("IdColor", "color", out int idColor) || idColor <= 0)
+                {
+                    MostrarDatoInvalido(_listas["IdColor"], "Seleccione un color valido.");
+                    return false;
+                }
+
+                if (!TryObtenerDecimal("PrecioVenta", out decimal precioVenta) || precioVenta < 0)
+                {
+                    MostrarDatoInvalido(_campos["PrecioVenta"], "Ingrese un precio de venta valido.");
+                    return false;
+                }
+
+                if (!TryObtenerEntero("StockActual", "stock actual", out int stockActual) || stockActual < 0)
+                {
+                    MostrarDatoInvalido(_campos["StockActual"], "Ingrese un stock actual valido.");
+                    return false;
+                }
+
+                if (!TryObtenerEntero("StockMinimo", "stock minimo", out int stockMinimo) || stockMinimo < 0)
+                {
+                    MostrarDatoInvalido(_campos["StockMinimo"], "Ingrese un stock minimo valido.");
+                    return false;
+                }
+            }
+
             return true;
         }
 
@@ -543,6 +672,14 @@ namespace TiendaIndumentaria.App
         private bool TryObtenerEntero(string clave, string campo, out int valor)
         {
             valor = 0;
+            if (_listas.TryGetValue(clave, out ComboBox? lista))
+            {
+                if (lista.SelectedValue == null)
+                    return false;
+
+                return int.TryParse(Convert.ToString(lista.SelectedValue), out valor);
+            }
+
             return _campos.TryGetValue(clave, out TextBox? texto) &&
                 int.TryParse(texto.Text.Trim(), out valor);
         }
@@ -570,24 +707,75 @@ namespace TiendaIndumentaria.App
             return string.IsNullOrWhiteSpace(valor) ? null : valor;
         }
 
-        private void MostrarDatoRequerido(TextBox texto, string campo)
+        private int EnteroCampo(string clave)
+        {
+            TryObtenerEntero(clave, EtiquetaCampo(clave), out int valor);
+            return valor;
+        }
+
+        private decimal DecimalCampo(string clave)
+        {
+            TryObtenerDecimal(clave, out decimal valor);
+            return valor;
+        }
+
+        private void MostrarDatoRequerido(Control control, string campo)
         {
             MessageBox.Show(
                 $"Ingrese {campo}.",
                 "Dato requerido",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
-            texto.Focus();
+            control.Focus();
         }
 
-        private void MostrarDatoInvalido(TextBox texto, string mensaje)
+        private void MostrarDatoInvalido(Control control, string mensaje)
         {
             MessageBox.Show(
                 mensaje,
                 "Dato invalido",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
-            texto.Focus();
+            control.Focus();
+        }
+
+        private static bool EsCampoLista(string clave)
+        {
+            return clave == "IdCategoria" ||
+                clave == "IdMarca" ||
+                clave == "IdTalle" ||
+                clave == "IdColor";
+        }
+
+        private static void CargarLista(ComboBox lista, string clave)
+        {
+            (string Tabla, string ColumnaId) = DatosLista(clave);
+            DataTable datos = Conexion.EjecutarConsulta(
+                $"SELECT {ColumnaId} AS Id, Nombre FROM {Tabla} WHERE Activo = 1 ORDER BY Nombre");
+
+            DataRow seleccion = datos.NewRow();
+            seleccion["Id"] = 0;
+            seleccion["Nombre"] = "Seleccione...";
+            datos.Rows.InsertAt(seleccion, 0);
+
+            lista.DisplayMember = "Nombre";
+            lista.ValueMember = "Id";
+            lista.DataSource = datos;
+        }
+
+        private static (string Tabla, string ColumnaId) DatosLista(string clave)
+        {
+            switch (clave)
+            {
+                case "IdCategoria":
+                    return ("Categorias", "IdCategoria");
+                case "IdMarca":
+                    return ("Marcas", "IdMarca");
+                case "IdTalle":
+                    return ("Talles", "IdTalle");
+                default:
+                    return ("Colores", "IdColor");
+            }
         }
 
         private (string Clave, string Etiqueta, bool SoloLectura)[] CamposFormulario()
@@ -639,6 +827,21 @@ namespace TiendaIndumentaria.App
                         ("Telefono", "Telefono", false)
                     };
 
+                case TipoRegistro.Producto:
+                    return new[]
+                    {
+                        ("IdCategoria", "Id categoria", false),
+                        ("IdMarca", "Id marca", false),
+                        ("IdTalle", "Id talle", false),
+                        ("IdColor", "Id color", false),
+                        ("CodigoProducto", "Codigo", false),
+                        ("Nombre", "Nombre", false),
+                        ("Descripcion", "Descripcion", false),
+                        ("PrecioVenta", "Precio venta", false),
+                        ("StockActual", "Stock actual", false),
+                        ("StockMinimo", "Stock minimo", false)
+                    };
+
                 case TipoRegistro.Categoria:
                 case TipoRegistro.Talle:
                 case TipoRegistro.Marca:
@@ -678,6 +881,8 @@ namespace TiendaIndumentaria.App
                     return "proveedor";
                 case TipoRegistro.Cliente:
                     return "cliente";
+                case TipoRegistro.Producto:
+                    return "producto";
                 case TipoRegistro.Categoria:
                     return "categoria";
                 case TipoRegistro.Talle:
@@ -707,8 +912,16 @@ namespace TiendaIndumentaria.App
             return _tipoRegistro == TipoRegistro.Compra || _tipoRegistro == TipoRegistro.Venta;
         }
 
+        private bool EsProducto()
+        {
+            return _tipoRegistro == TipoRegistro.Producto;
+        }
+
         private int AltoFormulario()
         {
+            if (EsProducto())
+                return 500;
+
             return EsOperacion() ? 390 : 315;
         }
     }

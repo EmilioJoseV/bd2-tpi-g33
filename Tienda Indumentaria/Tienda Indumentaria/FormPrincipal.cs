@@ -152,6 +152,7 @@ namespace TiendaIndumentaria.App
             registros.DropDownItems.Add(CrearItemMenu("Nuevo proveedor", () => AbrirFormularioRegistro(TipoRegistro.Proveedor)));
             registros.DropDownItems.Add(CrearItemMenu("Nuevo cliente", () => AbrirFormularioRegistro(TipoRegistro.Cliente)));
             registros.DropDownItems.Add(CrearItemMenu("Nuevo empleado", () => AbrirFormularioRegistro(TipoRegistro.Empleado)));
+            registros.DropDownItems.Add(CrearItemMenu("Nuevo producto", () => AbrirFormularioRegistro(TipoRegistro.Producto)));
             registros.DropDownItems.Add(new ToolStripSeparator());
             _menuPrincipalEditar = CrearItemMenu("Editar seleccionado", EditarRegistroSeleccionado);
             _menuPrincipalCambiarEstado = CrearItemMenu("Activar/Inactivar seleccionado", CambiarEstadoRegistroSeleccionado);
@@ -232,10 +233,11 @@ namespace TiendaIndumentaria.App
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Productos",
-                "SELECT * FROM Productos",
+                "SELECT IdProducto, IdCategoria, IdMarca, IdTalle, IdColor, CodigoProducto, Nombre, Descripcion, PrecioVenta, StockActual, StockMinimo, Activo " +
+                "FROM Productos ORDER BY Nombre",
                 "Productos",
                 "IdProducto",
-                null));
+                TipoRegistro.Producto));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Categorias",
@@ -334,6 +336,7 @@ namespace TiendaIndumentaria.App
             TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
             return tipo == TipoRegistro.Proveedor ||
                 tipo == TipoRegistro.Empleado ||
+                tipo == TipoRegistro.Producto ||
                 tipo == TipoRegistro.Categoria ||
                 tipo == TipoRegistro.Talle ||
                 tipo == TipoRegistro.Marca ||
@@ -448,6 +451,8 @@ namespace TiendaIndumentaria.App
                     return "Proveedores";
                 case TipoRegistro.Empleado:
                     return "Empleados";
+                case TipoRegistro.Producto:
+                    return "Productos";
                 case TipoRegistro.Categoria:
                     return "Categorias";
                 case TipoRegistro.Talle:
@@ -525,6 +530,23 @@ namespace TiendaIndumentaria.App
                 };
             }
 
+            if (tipoRegistro == TipoRegistro.Producto)
+            {
+                return new Dictionary<string, string>
+                {
+                    ["IdCategoria"] = Texto(fila, "IdCategoria"),
+                    ["IdMarca"] = Texto(fila, "IdMarca"),
+                    ["IdTalle"] = Texto(fila, "IdTalle"),
+                    ["IdColor"] = Texto(fila, "IdColor"),
+                    ["CodigoProducto"] = Texto(fila, "CodigoProducto"),
+                    ["Nombre"] = Texto(fila, "Nombre"),
+                    ["Descripcion"] = Texto(fila, "Descripcion"),
+                    ["PrecioVenta"] = Texto(fila, "PrecioVenta"),
+                    ["StockActual"] = Texto(fila, "StockActual"),
+                    ["StockMinimo"] = Texto(fila, "StockMinimo")
+                };
+            }
+
             if (tipoRegistro == TipoRegistro.Color)
             {
                 return new Dictionary<string, string>
@@ -579,6 +601,8 @@ namespace TiendaIndumentaria.App
                     return "proveedor";
                 case TipoRegistro.Empleado:
                     return "empleado";
+                case TipoRegistro.Producto:
+                    return "producto";
                 case TipoRegistro.Categoria:
                     return "categoria";
                 case TipoRegistro.Talle:
@@ -606,6 +630,12 @@ namespace TiendaIndumentaria.App
                     Conexion.EjecutarProcedimiento(
                         estaActivo ? "dbo.SP_Empleado_Desactivar" : "dbo.SP_Empleado_Reactivar",
                         ("@IdEmpleado", idRegistro));
+                    break;
+
+                case TipoRegistro.Producto:
+                    Conexion.EjecutarProcedimiento(
+                        estaActivo ? "dbo.SP_Producto_Desactivar" : "dbo.SP_Producto_Reactivar",
+                        ("@IdProducto", idRegistro));
                     break;
 
                 case TipoRegistro.Categoria:
