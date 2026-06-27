@@ -91,6 +91,11 @@ SELECT
     COUNT(*) AS CantidadVentas,
     SUM(v.Total) AS TotalFacturado
 FROM Ventas v
+WHERE v.IdEstadoVenta IN (
+    SELECT IdEstadoVenta
+    FROM EstadosVenta
+    WHERE UPPER(Nombre) = 'CONFIRMADA'
+)
 GROUP BY
     YEAR(v.FechaVenta),
     MONTH(v.FechaVenta);
