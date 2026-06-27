@@ -1,11 +1,11 @@
 -- Ventas
 
--- sp_registrarVenta: registra la cabecera de una venta en estado pendiente.
-IF OBJECT_ID(N'dbo.sp_registrarVenta', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_registrarVenta;
+-- SP_Venta_Registrar: registra la cabecera de una venta en estado pendiente.
+IF OBJECT_ID(N'dbo.SP_Venta_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Venta_Registrar;
 GO
 
-CREATE PROCEDURE dbo.sp_registrarVenta
+CREATE PROCEDURE dbo.SP_Venta_Registrar
     @IdCliente INT,
     @IdEmpleado INT,
     @IdMedioPago INT
@@ -105,12 +105,12 @@ BEGIN
 END;
 GO
 
--- sp_actualizarVenta: actualiza los datos principales de una venta existente.
-IF OBJECT_ID(N'dbo.sp_actualizarVenta', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_actualizarVenta;
+-- SP_Venta_Actualizar: actualiza los datos principales de una venta existente.
+IF OBJECT_ID(N'dbo.SP_Venta_Actualizar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Venta_Actualizar;
 GO
 
-CREATE PROCEDURE dbo.sp_actualizarVenta
+CREATE PROCEDURE dbo.SP_Venta_Actualizar
     @IdVenta INT,
     @IdCliente INT,
     @IdEmpleado INT,
