@@ -11,5 +11,6 @@ GO
 :r .\Scripts\06_Store_Procedures_Scripts\06h_SP_DetalleCompras.sql
 :r .\Scripts\06_Store_Procedures_Scripts\06i_SP_DetalleVentas.sql
 :r .\Scripts\06_Store_Procedures_Scripts\06j_SP_Categorias.sql
+:r .\Scripts\06_Store_Procedures_Scripts\06k_SP_Productos.sql
 :r .\Scripts\06_Store_Procedures_Scripts\06k_SP_MovimientosStock.sql
 :r .\Scripts\06_Store_Procedures_Scripts\06l_SP_Ventas.sql

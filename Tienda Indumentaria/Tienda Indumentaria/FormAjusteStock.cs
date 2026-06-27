@@ -89,7 +89,7 @@ namespace TiendaIndumentaria.App
             contenedor.Controls.Add(panelOperacion, 1, 1);
             contenedor.Controls.Add(CrearEtiqueta("Cantidad", true), 0, 2);
             contenedor.Controls.Add(_textoCantidad, 1, 2);
-            contenedor.Controls.Add(CrearEtiqueta("Empleado", false), 0, 3);
+            contenedor.Controls.Add(CrearEtiqueta("Empleado", true), 0, 3);
             contenedor.Controls.Add(_listaEmpleados, 1, 3);
             contenedor.Controls.Add(CrearEtiqueta("Motivo", false), 0, 4);
             contenedor.Controls.Add(_textoMotivo, 1, 4);
@@ -162,7 +162,7 @@ namespace TiendaIndumentaria.App
 
             DataRow seleccion = datos.NewRow();
             seleccion["IdEmpleado"] = 0;
-            seleccion["NombreCompleto"] = "Sin empleado";
+            seleccion["NombreCompleto"] = "Seleccione empleado...";
             datos.Rows.InsertAt(seleccion, 0);
 
             ComboBusqueda.Configurar(_listaEmpleados, datos, "IdEmpleado", "NombreCompleto");
@@ -175,14 +175,17 @@ namespace TiendaIndumentaria.App
 
             try
             {
-                int idEmpleado = Convert.ToInt32(_listaEmpleados.SelectedValue);
-                object? empleadoParametro = idEmpleado == 0 ? null : idEmpleado;
+                int cantidad = Convert.ToInt32(_textoCantidad.Text.Trim());
+                int cantidadMovimiento = _opcionSumar.Checked ? cantidad : -cantidad;
+                string tipoMovimiento = _opcionSumar.Checked ? "Ajuste manual" : "Ajuste negativo";
+                int idTipoMovimientoStock = ObtenerIdTipoMovimientoStock(tipoMovimiento);
+
                 Resultado = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Producto_AjustarStock",
+                    "dbo.SP_MovimientoStock_Registrar",
                     ("@IdProducto", Convert.ToInt32(_listaProductos.SelectedValue)),
-                    ("@Operacion", _opcionSumar.Checked ? "SUMAR" : "RESTAR"),
-                    ("@Cantidad", Convert.ToInt32(_textoCantidad.Text.Trim())),
-                    ("@IdEmpleado", empleadoParametro),
+                    ("@IdTipoMovimientoStock", idTipoMovimientoStock),
+                    ("@IdEmpleado", Convert.ToInt32(_listaEmpleados.SelectedValue)),
+                    ("@Cantidad", cantidadMovimiento),
                     ("@Motivo", string.IsNullOrWhiteSpace(_textoMotivo.Text) ? null : _textoMotivo.Text.Trim()));
 
                 MensajeResultado = _opcionSumar.Checked
@@ -218,7 +221,27 @@ namespace TiendaIndumentaria.App
                 return false;
             }
 
+            if (_listaEmpleados.SelectedValue == null ||
+                !int.TryParse(Convert.ToString(_listaEmpleados.SelectedValue), out int idEmpleado) ||
+                idEmpleado <= 0)
+            {
+                MostrarDatoInvalido(_listaEmpleados, "Seleccione un empleado.");
+                return false;
+            }
+
             return true;
+        }
+
+        private static int ObtenerIdTipoMovimientoStock(string nombre)
+        {
+            DataTable datos = Conexion.EjecutarConsulta(
+                "SELECT IdTipoMovimientoStock FROM TiposMovimientoStock WHERE Nombre = @Nombre",
+                ("@Nombre", nombre));
+
+            if (datos.Rows.Count == 0)
+                throw new InvalidOperationException($"No existe el tipo de movimiento '{nombre}'.");
+
+            return Convert.ToInt32(datos.Rows[0]["IdTipoMovimientoStock"]);
         }
 
         private static ComboBox CrearLista()

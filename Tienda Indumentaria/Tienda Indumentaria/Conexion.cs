@@ -100,7 +100,7 @@ namespace TiendaIndumentaria.App
                 DataTable compra = EjecutarSpTablaEnTransaccion(
                     conexion,
                     transaccion,
-                    "sp_registrarCompra",
+                    "SP_Compra_Registrar",
                     ("@IdProveedor", idProveedor),
                     ("@IdEmpleado", idEmpleado),
                     ("@NumeroComprobante", (object?)numeroComprobante ?? DBNull.Value),
@@ -119,7 +119,7 @@ namespace TiendaIndumentaria.App
                     EjecutarSpEnTransaccion(
                         conexion,
                         transaccion,
-                        "sp_registrarDetalleCompra",
+                        "SP_DetalleCompra_Registrar",
                         ("@IdCompra", idCompra),
                         ("@IdProducto", idProducto),
                         ("@Cantidad", cantidad),
@@ -181,7 +181,7 @@ namespace TiendaIndumentaria.App
                     EjecutarSpEnTransaccion(
                         conexion,
                         transaccion,
-                        "sp_registrarDetalleVenta",
+                        "SP_DetalleVenta_Registrar",
                         ("@IdVenta", idVenta),
                         ("@IdProducto", idProducto),
                         ("@Cantidad", cantidad));

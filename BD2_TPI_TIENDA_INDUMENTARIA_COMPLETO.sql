@@ -1,3 +1,9 @@
+-- Script completo generado desde los scripts modulares actuales.
+-- Ejecutar en SQL Server con sqlcmd o SSMS.
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\01_Create_DB_Scripts\01_CREATE_DB.sql
+------------------------------------------------------------------------------------------------
 USE master;
 GO
 
@@ -202,6 +208,10 @@ GO
 SELECT 'BD creada OK...' AS Resultado;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\02_Insert_Scripts\02_INSERT_DATA.sql
+------------------------------------------------------------------------------------------------
 USE BD2_TPI_TIENDA_INDUMENTARIA;
 GO
 
@@ -393,52 +403,192 @@ GO
 SELECT 'Carga de los datos iniciales para pruebas OK...' AS Resultado;
 GO
 
-IF OBJECT_ID(N'dbo.vw_ProductosBajoStock', N'V') IS NOT NULL
-    DROP VIEW dbo.vw_ProductosBajoStock;
-GO
 
-CREATE VIEW dbo.vw_ProductosBajoStock
-AS
-SELECT
-    p.IdProducto,
-    p.CodigoProducto,
-    p.Nombre AS Producto,
-    c.Nombre AS Categoria,
-    m.Nombre AS Marca,
-    t.Nombre AS Talle,
-    co.Nombre AS Color,
-    p.StockActual,
-    p.StockMinimo,
-    p.StockMinimo - p.StockActual AS CantidadAReponer,
-    p.PrecioVenta
-FROM Productos p
-INNER JOIN Categorias c ON c.IdCategoria = p.IdCategoria
-INNER JOIN Marcas m ON m.IdMarca = p.IdMarca
-INNER JOIN Talles t ON t.IdTalle = p.IdTalle
-INNER JOIN Colores co ON co.IdColor = p.IdColor
-WHERE p.Activo = 1
-  AND p.StockActual <= p.StockMinimo;
-GO
-
-GO
-
-GO
-
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\03_Functions_Scripts\03_FUNCTIONS.sql
+------------------------------------------------------------------------------------------------
 USE BD2_TPI_TIENDA_INDUMENTARIA;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #13 - Disminuir automáticamente el stock cuando se registra una venta a un cliente
--- trg_actualizarStockPorEstadoVenta: toca el stock si la venta pasa a confirmada o deja de estarlo.
+-- FN_Venta_CalcularTotal: devuelve el total actual de una venta segun sus detalles
+IF OBJECT_ID(N'dbo.FN_Venta_CalcularTotal', N'FN') IS NOT NULL
+    DROP FUNCTION dbo.FN_Venta_CalcularTotal;
+GO
 
-CREATE TRIGGER trg_actualizarStockPorEstadoVenta
+CREATE FUNCTION dbo.FN_Venta_CalcularTotal
+(
+    @IdVenta INT
+)
+RETURNS DECIMAL(12,2)
+AS
+BEGIN
+    DECLARE @Total DECIMAL(12,2);
+
+    SELECT @Total = ISNULL(SUM(dv.Subtotal), 0)
+    FROM DetalleVentas dv
+    WHERE dv.IdVenta = @IdVenta;
+
+    RETURN @Total;
+END;
+GO
+
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\04_Views_Scripts\04_VIEWS.sql
+------------------------------------------------------------------------------------------------
+USE BD2_TPI_TIENDA_INDUMENTARIA;
+GO
+
+------------------------------------------------------------------------------------------------
+-- VW_Producto_ConsultarHistorialStock: Mostrar los movimientos de stock del producto.
+
+IF OBJECT_ID(N'dbo.VW_Producto_ConsultarHistorialStock', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Producto_ConsultarHistorialStock;
+GO
+
+CREATE VIEW dbo.VW_Producto_ConsultarHistorialStock
+AS
+SELECT
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre AS NombreProducto,
+    tms.Nombre AS TipoMovimiento,
+    e.Apellido + ', ' + e.Nombre AS Empleado,
+    CASE
+        WHEN ms.IdCompra IS NOT NULL THEN 'Compra'
+        WHEN ms.IdVenta IS NOT NULL THEN 'Venta'
+        ELSE 'Ajuste'
+    END AS OrigenMovimiento,
+    c.NumeroComprobante AS NumeroComprobanteCompra,
+    ms.FechaMovimiento,
+    ms.Cantidad,
+    ms.Motivo
+FROM MovimientosStock ms
+INNER JOIN Productos p ON p.IdProducto = ms.IdProducto
+INNER JOIN TiposMovimientoStock tms ON tms.IdTipoMovimientoStock = ms.IdTipoMovimientoStock
+LEFT JOIN Empleados e ON e.IdEmpleado = ms.IdEmpleado
+LEFT JOIN Compras c ON c.IdCompra = ms.IdCompra;
+GO
+
+------------------------------------------------------------------------------------------------
+-- VW_Producto_ConsultarStockBajoMinimo: muestra los productos que ya estan por debajo del minimo
+
+IF OBJECT_ID(N'dbo.VW_Producto_ConsultarStockBajoMinimo', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Producto_ConsultarStockBajoMinimo;
+GO
+
+CREATE VIEW dbo.VW_Producto_ConsultarStockBajoMinimo
+AS
+SELECT
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre,
+    p.StockActual,
+    p.StockMinimo,
+    p.StockMinimo - p.StockActual AS CantidadPorDebajoDelMinimo
+FROM Productos p
+WHERE p.Activo = 1 --Siempre fijarnos en los productos activos
+  AND p.StockActual < p.StockMinimo;
+GO
+
+------------------------------------------------------------------------------------------------
+-- VW_Producto_ConsultarMasVendido: muestra cuales productos tuvieron mas salida.
+
+IF OBJECT_ID(N'dbo.VW_Producto_ConsultarMasVendido', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Producto_ConsultarMasVendido;
+GO
+
+CREATE VIEW dbo.VW_Producto_ConsultarMasVendido
+AS
+SELECT
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre AS NombreProducto,
+    SUM(dv.Cantidad) AS CantidadVendida,
+    SUM(dv.Subtotal) AS TotalFacturado
+FROM DetalleVentas dv
+INNER JOIN Productos p ON p.IdProducto = dv.IdProducto
+GROUP BY
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre;
+GO
+
+------------------------------------------------------------------------------------------------
+-- VW_Venta_ConsultarMensual: resume cuantas ventas hubo por aÃ±o-mes y cuanto se facturo.
+
+IF OBJECT_ID(N'dbo.VW_Venta_ConsultarMensual', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Venta_ConsultarMensual;
+GO
+
+CREATE VIEW dbo.VW_Venta_ConsultarMensual
+AS
+SELECT
+    YEAR(v.FechaVenta) AS Anio,
+    MONTH(v.FechaVenta) AS Mes,
+    COUNT(*) AS CantidadVentas,
+    SUM(v.Total) AS TotalFacturado
+FROM Ventas v
+GROUP BY
+    YEAR(v.FechaVenta),
+    MONTH(v.FechaVenta);
+GO
+
+------------------------------------------------------------------------------------------------
+-- VW_Producto_ConsultarStockActual: muestra el stock actual de todos los productos y si ya esta por debajo del minimo
+IF OBJECT_ID(N'dbo.VW_Producto_ConsultarStockActual', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Producto_ConsultarStockActual;
+GO
+
+CREATE VIEW dbo.VW_Producto_ConsultarStockActual
+AS
+SELECT
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre,
+    p.StockActual,
+    p.StockMinimo,
+    p.StockActual - p.StockMinimo AS DiferenciaConMinimo,
+    CASE
+        WHEN p.StockActual < p.StockMinimo THEN 'Stock bajo'
+        ELSE 'OK'
+    END AS EstadoStock
+FROM Productos p
+WHERE p.Activo = 1;
+GO
+
+-- VW_Inventario_ConsultarValorTotal: suma el valor de todo el stock activo.
+IF OBJECT_ID(N'dbo.VW_Inventario_ConsultarValorTotal', N'V') IS NOT NULL
+    DROP VIEW dbo.VW_Inventario_ConsultarValorTotal;
+GO
+
+CREATE VIEW dbo.VW_Inventario_ConsultarValorTotal
+AS
+SELECT
+    SUM(p.StockActual * p.PrecioVenta) AS ValorTotalInventarioDisponible
+FROM Productos p
+GO
+
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\05_Triggers_Scripts\05_TRIGGERS.sql
+------------------------------------------------------------------------------------------------
+USE BD2_TPI_TIENDA_INDUMENTARIA;
+GO
+
+------------------------------------------------------------------------------------------------
+-- TRG_Venta_ActualizarStockPorEstado: toca el stock si la venta pasa a confirmada o deja de estarlo.
+
+IF OBJECT_ID(N'dbo.TRG_Venta_ActualizarStockPorEstado', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.TRG_Venta_ActualizarStockPorEstado;
+GO
+
+CREATE TRIGGER dbo.TRG_Venta_ActualizarStockPorEstado
 ON Ventas
 AFTER UPDATE
 AS
 BEGIN
-    DECLARE @IdTipoEgresoVenta INT;
-    DECLARE @IdTipoReversionVenta INT;
-
     DECLARE @VentasQueSeConfirmaron TABLE (
         IdVenta INT
     );
@@ -451,14 +601,6 @@ BEGIN
         IdProducto INT,
         CantidadAAjustar INT
     );
-
-    SELECT @IdTipoEgresoVenta = IdTipoMovimientoStock
-    FROM TiposMovimientoStock
-    WHERE Nombre = 'Egreso por venta';
-
-    SELECT @IdTipoReversionVenta = IdTipoMovimientoStock
-    FROM TiposMovimientoStock
-    WHERE Nombre = 'Ajuste manual';
 
     -- Aca guardamos las ventas que antes no estaban confirmadas y ahora si.
     INSERT INTO @VentasQueSeConfirmaron (IdVenta)
@@ -498,20 +640,6 @@ BEGIN
     INNER JOIN @VentasQueSeDesconfirmaron vd ON vd.IdVenta = dv.IdVenta
     GROUP BY dv.IdProducto;
 
-    IF EXISTS (SELECT 1 FROM @VentasQueSeConfirmaron) AND @IdTipoEgresoVenta IS NULL
-    BEGIN
-        RAISERROR ('No existe el tipo de movimiento Egreso por venta', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
-
-    IF EXISTS (SELECT 1 FROM @VentasQueSeDesconfirmaron) AND @IdTipoReversionVenta IS NULL
-    BEGIN
-        RAISERROR ('No existe el tipo de movimiento Ajuste manual', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
-
     -- Antes de actualizar nada, revisamos si algun stock quedaria negativo.
     IF EXISTS (
         SELECT 1
@@ -540,67 +668,127 @@ BEGIN
         FROM @MovimientosStock
         GROUP BY IdProducto
     ) m ON m.IdProducto = p.IdProducto;
-
-    INSERT INTO MovimientosStock (
-        IdProducto,
-        IdTipoMovimientoStock,
-        IdEmpleado,
-        IdCompra,
-        IdVenta,
-        FechaMovimiento,
-        Cantidad,
-        Motivo
-    )
-    SELECT
-        dv.IdProducto,
-        @IdTipoEgresoVenta,
-        v.IdEmpleado,
-        NULL,
-        v.IdVenta,
-        SYSDATETIME(),
-        SUM(dv.Cantidad),
-        'Salida por venta VTA-' + CONVERT(varchar(20), v.IdVenta)
-    FROM DetalleVentas dv
-    INNER JOIN @VentasQueSeConfirmaron vc ON vc.IdVenta = dv.IdVenta
-    INNER JOIN Ventas v ON v.IdVenta = dv.IdVenta
-    GROUP BY dv.IdProducto, v.IdEmpleado, v.IdVenta;
-
-    INSERT INTO MovimientosStock (
-        IdProducto,
-        IdTipoMovimientoStock,
-        IdEmpleado,
-        IdCompra,
-        IdVenta,
-        FechaMovimiento,
-        Cantidad,
-        Motivo
-    )
-    SELECT
-        dv.IdProducto,
-        @IdTipoReversionVenta,
-        v.IdEmpleado,
-        NULL,
-        v.IdVenta,
-        SYSDATETIME(),
-        SUM(dv.Cantidad),
-        'Reversion de venta VTA-' + CONVERT(varchar(20), v.IdVenta)
-    FROM DetalleVentas dv
-    INNER JOIN @VentasQueSeDesconfirmaron vd ON vd.IdVenta = dv.IdVenta
-    INNER JOIN Ventas v ON v.IdVenta = dv.IdVenta
-    GROUP BY dv.IdProducto, v.IdEmpleado, v.IdVenta;
 END;
 GO
 
--- trg_actualizarStockPorEstadoCompra: toca el stock si la compra pasa a confirmada o deja de estarlo.
+------------------------------------------------------------------------------------------------
+-- TRG_Compra_RegistrarMovimientoStock: registra el movimiento de stock cuando una compra se confirma.
 
-CREATE TRIGGER trg_actualizarStockPorEstadoCompra
+IF OBJECT_ID(N'dbo.TRG_Compra_RegistrarMovimientoStock', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.TRG_Compra_RegistrarMovimientoStock;
+GO
+
+CREATE TRIGGER dbo.TRG_Compra_RegistrarMovimientoStock
 ON Compras
 AFTER UPDATE
 AS
 BEGIN
-    DECLARE @IdTipoIngresoCompra INT;
-    DECLARE @IdTipoReversionCompra INT;
+    SET NOCOUNT ON;
 
+    DECLARE @IdTipoIngreso INT;
+
+    SELECT @IdTipoIngreso = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE UPPER(Nombre) = 'INGRESO POR COMPRA';
+
+    IF @IdTipoIngreso IS NULL
+        RETURN;
+
+    INSERT INTO MovimientosStock (
+        IdProducto,
+        IdTipoMovimientoStock,
+        IdEmpleado,
+        IdCompra,
+        IdVenta,
+        FechaMovimiento,
+        Cantidad,
+        Motivo
+    )
+    SELECT
+        dc.IdProducto,
+        @IdTipoIngreso,
+        i.IdEmpleado,
+        i.IdCompra,
+        NULL,
+        SYSDATETIME(),
+        dc.Cantidad,
+        CONCAT('Ingreso automÃƒÂ¡tico por confirmaciÃƒÂ³n de compra #', i.IdCompra)
+    FROM inserted i
+    INNER JOIN deleted d           ON d.IdCompra        = i.IdCompra
+    INNER JOIN EstadosCompra ecAnt ON ecAnt.IdEstadoCompra = d.IdEstadoCompra
+    INNER JOIN EstadosCompra ecNvo ON ecNvo.IdEstadoCompra = i.IdEstadoCompra
+    INNER JOIN DetalleCompras dc   ON dc.IdCompra        = i.IdCompra
+    WHERE i.IdEstadoCompra <> d.IdEstadoCompra
+      AND UPPER(ecAnt.Nombre) <> 'CONFIRMADA'
+      AND UPPER(ecNvo.Nombre)  = 'CONFIRMADA';
+END;
+GO
+
+------------------------------------------------------------------------------------------------
+-- TRG_Venta_RegistrarMovimientoStock: registra el movimiento de stock cuando una venta se confirma.
+
+IF OBJECT_ID(N'dbo.TRG_Venta_RegistrarMovimientoStock', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock;
+GO
+
+CREATE TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock
+ON Ventas
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @IdTipoEgreso INT;
+
+    SELECT @IdTipoEgreso = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE UPPER(Nombre) = 'EGRESO POR VENTA';
+
+    IF @IdTipoEgreso IS NULL
+        RETURN;
+
+    INSERT INTO MovimientosStock (
+        IdProducto,
+        IdTipoMovimientoStock,
+        IdEmpleado,
+        IdCompra,
+        IdVenta,
+        FechaMovimiento,
+        Cantidad,
+        Motivo
+    )
+    SELECT
+        dv.IdProducto,
+        @IdTipoEgreso,
+        i.IdEmpleado,
+        NULL,
+        i.IdVenta,
+        SYSDATETIME(),
+        dv.Cantidad * -1,   -- negativo: es una salida
+        CONCAT('Egreso automÃƒÂ¡tico por confirmaciÃƒÂ³n de venta #', i.IdVenta)
+    FROM inserted i
+    INNER JOIN deleted d           ON d.IdVenta          = i.IdVenta
+    INNER JOIN EstadosVenta evAnt  ON evAnt.IdEstadoVenta  = d.IdEstadoVenta
+    INNER JOIN EstadosVenta evNvo  ON evNvo.IdEstadoVenta  = i.IdEstadoVenta
+    INNER JOIN DetalleVentas dv    ON dv.IdVenta           = i.IdVenta
+    WHERE i.IdEstadoVenta <> d.IdEstadoVenta
+      AND UPPER(evAnt.Nombre) <> 'CONFIRMADA'
+      AND UPPER(evNvo.Nombre)  = 'CONFIRMADA';
+END;
+GO
+
+------------------------------------------------------------------------------------------------
+-- TRG_Compra_ActualizarStockPorEstado: toca el stock si la compra pasa a confirmada o deja de estarlo.
+
+IF OBJECT_ID(N'dbo.TRG_Compra_ActualizarStockPorEstado', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.TRG_Compra_ActualizarStockPorEstado;
+GO
+
+CREATE TRIGGER dbo.TRG_Compra_ActualizarStockPorEstado
+ON Compras
+AFTER UPDATE
+AS
+BEGIN
     DECLARE @ComprasQueSeConfirmaron TABLE (
         IdCompra INT
     );
@@ -613,14 +801,6 @@ BEGIN
         IdProducto INT,
         CantidadAAjustar INT
     );
-
-    SELECT @IdTipoIngresoCompra = IdTipoMovimientoStock
-    FROM TiposMovimientoStock
-    WHERE Nombre = 'Ingreso por compra';
-
-    SELECT @IdTipoReversionCompra = IdTipoMovimientoStock
-    FROM TiposMovimientoStock
-    WHERE Nombre = 'Ajuste negativo';
 
     -- Aca guardamos las compras que antes no estaban confirmadas y ahora si.
     INSERT INTO @ComprasQueSeConfirmaron (IdCompra)
@@ -660,20 +840,6 @@ BEGIN
     INNER JOIN @ComprasQueSeDesconfirmaron cd ON cd.IdCompra = dc.IdCompra
     GROUP BY dc.IdProducto;
 
-    IF EXISTS (SELECT 1 FROM @ComprasQueSeConfirmaron) AND @IdTipoIngresoCompra IS NULL
-    BEGIN
-        RAISERROR ('No existe el tipo de movimiento Ingreso por compra', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
-
-    IF EXISTS (SELECT 1 FROM @ComprasQueSeDesconfirmaron) AND @IdTipoReversionCompra IS NULL
-    BEGIN
-        RAISERROR ('No existe el tipo de movimiento Ajuste negativo', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
-
     -- Antes de actualizar nada, revisamos si algun stock quedaria negativo
     IF EXISTS (
         SELECT 1
@@ -702,59 +868,17 @@ BEGIN
         FROM @MovimientosStock
         GROUP BY IdProducto
     ) m ON m.IdProducto = p.IdProducto;
-
-    INSERT INTO MovimientosStock (
-        IdProducto,
-        IdTipoMovimientoStock,
-        IdEmpleado,
-        IdCompra,
-        IdVenta,
-        FechaMovimiento,
-        Cantidad,
-        Motivo
-    )
-    SELECT
-        dc.IdProducto,
-        @IdTipoIngresoCompra,
-        c.IdEmpleado,
-        c.IdCompra,
-        NULL,
-        SYSDATETIME(),
-        SUM(dc.Cantidad),
-        'Ingreso por compra ' + COALESCE(NULLIF(c.NumeroComprobante, ''), 'COMP-' + CONVERT(varchar(20), c.IdCompra))
-    FROM DetalleCompras dc
-    INNER JOIN @ComprasQueSeConfirmaron cc ON cc.IdCompra = dc.IdCompra
-    INNER JOIN Compras c ON c.IdCompra = dc.IdCompra
-    GROUP BY dc.IdProducto, c.IdEmpleado, c.IdCompra, c.NumeroComprobante;
-
-    INSERT INTO MovimientosStock (
-        IdProducto,
-        IdTipoMovimientoStock,
-        IdEmpleado,
-        IdCompra,
-        IdVenta,
-        FechaMovimiento,
-        Cantidad,
-        Motivo
-    )
-    SELECT
-        dc.IdProducto,
-        @IdTipoReversionCompra,
-        c.IdEmpleado,
-        c.IdCompra,
-        NULL,
-        SYSDATETIME(),
-        SUM(dc.Cantidad),
-        'Reversion de compra ' + COALESCE(NULLIF(c.NumeroComprobante, ''), 'COMP-' + CONVERT(varchar(20), c.IdCompra))
-    FROM DetalleCompras dc
-    INNER JOIN @ComprasQueSeDesconfirmaron cd ON cd.IdCompra = dc.IdCompra
-    INNER JOIN Compras c ON c.IdCompra = dc.IdCompra
-    GROUP BY dc.IdProducto, c.IdEmpleado, c.IdCompra, c.NumeroComprobante;
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06a_SP_Proveedores.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Proveedores
 
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Registrar (Procedimiento para registrar un nuevo proveedor y mantener sus datos de contacto)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Registrar;
@@ -822,7 +946,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Actualizar (Actualiza los datos principales de un proveedor existente.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Actualizar;
@@ -898,7 +1022,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_ActualizarContacto (Mantener sus datos de contacto: solo Email, Telefono y Direccion.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_ActualizarContacto', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_ActualizarContacto;
@@ -944,7 +1068,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Desactivar (Baja logica.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Desactivar;
@@ -972,7 +1096,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Reactivar (Reactivacion de un proveedor desactivado.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Reactivar;
@@ -1000,8 +1124,14 @@ BEGIN
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06b_SP_Empleados.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Empleados
 
+------------------------------------------------------------------------------------------------
 -- SP_Empleado_Registrar
 IF OBJECT_ID(N'dbo.SP_Empleado_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Empleado_Registrar;
@@ -1053,7 +1183,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Empleado_Actualizar
 IF OBJECT_ID(N'dbo.SP_Empleado_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Empleado_Actualizar;
@@ -1113,7 +1243,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Empleado_Desactivar
 IF OBJECT_ID(N'dbo.SP_Empleado_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Empleado_Desactivar;
@@ -1138,7 +1268,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Empleado_Reactivar
 IF OBJECT_ID(N'dbo.SP_Empleado_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Empleado_Reactivar;
@@ -1163,8 +1293,14 @@ BEGIN
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06c_SP_Talles.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Talles
 
+------------------------------------------------------------------------------------------------
 -- SP_Talle_Registrar
 IF OBJECT_ID(N'dbo.SP_Talle_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Talle_Registrar;
@@ -1204,7 +1340,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Talle_Actualizar
 IF OBJECT_ID(N'dbo.SP_Talle_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Talle_Actualizar;
@@ -1252,7 +1388,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Talle_Desactivar
 IF OBJECT_ID(N'dbo.SP_Talle_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Talle_Desactivar;
@@ -1277,7 +1413,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Talle_Reactivar
 IF OBJECT_ID(N'dbo.SP_Talle_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Talle_Reactivar;
@@ -1302,8 +1438,14 @@ BEGIN
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06d_SP_Marcas.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Marcas
 
+------------------------------------------------------------------------------------------------
 -- SP_Marca_Registrar
 IF OBJECT_ID(N'dbo.SP_Marca_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Marca_Registrar;
@@ -1343,7 +1485,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Marca_Actualizar
 IF OBJECT_ID(N'dbo.SP_Marca_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Marca_Actualizar;
@@ -1391,7 +1533,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Marca_Desactivar
 IF OBJECT_ID(N'dbo.SP_Marca_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Marca_Desactivar;
@@ -1416,7 +1558,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Marca_Reactivar
 IF OBJECT_ID(N'dbo.SP_Marca_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Marca_Reactivar;
@@ -1441,8 +1583,14 @@ BEGIN
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06e_SP_Colores.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Colores
 
+------------------------------------------------------------------------------------------------
 -- SP_Color_Registrar
 IF OBJECT_ID(N'dbo.SP_Color_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Color_Registrar;
@@ -1477,7 +1625,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Color_Actualizar
 IF OBJECT_ID(N'dbo.SP_Color_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Color_Actualizar;
@@ -1523,7 +1671,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Color_Desactivar
 IF OBJECT_ID(N'dbo.SP_Color_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Color_Desactivar;
@@ -1548,7 +1696,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Color_Reactivar
 IF OBJECT_ID(N'dbo.SP_Color_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Color_Reactivar;
@@ -1573,10 +1721,20 @@ BEGIN
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06f_SP_Clientes.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Clientes
 
--- sp_registrarCliente: da de alta un cliente y valida que el documento no se repita.
-CREATE PROCEDURE sp_registrarCliente
+------------------------------------------------------------------------------------------------
+-- SP_Cliente_Registrar: da de alta un cliente y valida que el documento no se repita.
+IF OBJECT_ID(N'dbo.SP_Cliente_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Cliente_Registrar;
+GO
+
+CREATE PROCEDURE dbo.SP_Cliente_Registrar
     @Apellido VARCHAR(100),
     @Nombre VARCHAR(100),
     @Documento VARCHAR(20),
@@ -1632,8 +1790,13 @@ BEGIN
 END;
 GO
 
--- sp_actualizarCliente: actualiza los datos principales de un cliente existente.
-CREATE PROCEDURE sp_actualizarCliente
+------------------------------------------------------------------------------------------------
+-- SP_Cliente_Actualizar: actualiza los datos principales de un cliente existente.
+IF OBJECT_ID(N'dbo.SP_Cliente_Actualizar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Cliente_Actualizar;
+GO
+
+CREATE PROCEDURE dbo.SP_Cliente_Actualizar
     @IdCliente INT,
     @Apellido VARCHAR(100),
     @Nombre VARCHAR(100),
@@ -1714,10 +1877,20 @@ BEGIN
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06g_SP_Compras.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Compras
 
--- sp_registrarCompra: registra una compra validando bien los datos de entrada.
-CREATE PROCEDURE sp_registrarCompra
+------------------------------------------------------------------------------------------------
+-- SP_Compra_Registrar: registra una compra validando bien los datos de entrada.
+IF OBJECT_ID(N'dbo.SP_Compra_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Compra_Registrar;
+GO
+
+CREATE PROCEDURE dbo.SP_Compra_Registrar
     @IdProveedor INT,
     @IdEmpleado INT,
     @NumeroComprobante VARCHAR(50),
@@ -1820,8 +1993,13 @@ BEGIN
 END;
 GO
 
--- sp_actualizarCompra: actualiza los datos principales de una compra existente.
-CREATE PROCEDURE sp_actualizarCompra
+------------------------------------------------------------------------------------------------
+-- SP_Compra_Actualizar: actualiza los datos principales de una compra existente.
+IF OBJECT_ID(N'dbo.SP_Compra_Actualizar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Compra_Actualizar;
+GO
+
+CREATE PROCEDURE dbo.SP_Compra_Actualizar
     @IdCompra INT,
     @IdProveedor INT,
     @IdEmpleado INT,
@@ -1955,144 +2133,75 @@ BEGIN
         Total = @Total
     WHERE IdCompra = @IdCompra;
 
+    SELECT IdCompra, IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total
+    FROM Compras
+    WHERE IdCompra = @IdCompra;
+
     PRINT 'Compra actualizada';
 END;
 GO
 
--- Ventas
+------------------------------------------------------------------------------------------------
+-- SP_Compra_Consultar: filtra compras por proveedor y por fecha.
 
--- sp_registrarVenta: registra la cabecera de una venta en estado pendiente.
-IF OBJECT_ID(N'dbo.sp_registrarVenta', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_registrarVenta;
+IF OBJECT_ID(N'dbo.SP_Compra_Consultar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Compra_Consultar;
 GO
 
-CREATE PROCEDURE dbo.sp_registrarVenta
-    @IdCliente INT,
-    @IdEmpleado INT,
-    @IdMedioPago INT
+CREATE PROCEDURE dbo.SP_Compra_Consultar
+    @FechaDesde DATE = NULL,
+    @FechaHasta DATE = NULL,
+    @IdProveedor INT = NULL
 AS
 BEGIN
-    SET NOCOUNT ON;
+    IF @FechaDesde IS NOT NULL AND @FechaHasta IS NOT NULL AND @FechaDesde > @FechaHasta
+    BEGIN
+        PRINT 'Las fechas no cierran';
+        RETURN;
+    END
 
-    DECLARE @IdEstadoPendiente INT;
-    DECLARE @IdVenta INT;
+    IF @IdProveedor IS NOT NULL AND @IdProveedor <= 0
+    BEGIN
+        PRINT 'El id de proveedor es invalido';
+        RETURN;
+    END
 
-    IF @IdCliente IS NULL OR @IdCliente <= 0
-        THROW 50101, 'El cliente es invalido.', 1;
-
-    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
-        THROW 50102, 'El empleado es invalido.', 1;
-
-    IF @IdMedioPago IS NULL OR @IdMedioPago <= 0
-        THROW 50103, 'El medio de pago es invalido.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM Clientes WHERE IdCliente = @IdCliente AND Activo = 1)
-        THROW 50104, 'El cliente indicado no existe o no esta activo.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado AND Activo = 1)
-        THROW 50105, 'El empleado indicado no existe o no esta activo.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM MediosPago WHERE IdMedioPago = @IdMedioPago AND Activo = 1)
-        THROW 50106, 'El medio de pago indicado no existe o no esta activo.', 1;
-
-    SELECT @IdEstadoPendiente = IdEstadoVenta
-    FROM EstadosVenta
-    WHERE UPPER(Nombre) = 'PENDIENTE';
-
-    IF @IdEstadoPendiente IS NULL
-        THROW 50107, 'No existe el estado pendiente registrado en la base.', 1;
-
-    INSERT INTO Ventas (IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total)
-    VALUES (@IdCliente, @IdEmpleado, @IdMedioPago, @IdEstadoPendiente, SYSDATETIME(), 0);
-
-    SET @IdVenta = CONVERT(INT, SCOPE_IDENTITY());
-
-    SELECT IdVenta, IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total
-    FROM Ventas
-    WHERE IdVenta = @IdVenta;
+    SELECT
+        c.IdCompra,
+        c.IdProveedor,
+        p.RazonSocial AS Proveedor,
+        c.IdEmpleado,
+        e.Apellido + ', ' + e.Nombre AS Empleado,
+        c.IdEstadoCompra,
+        ec.Nombre AS Estado,
+        c.FechaCompra,
+        c.NumeroComprobante,
+        c.Total
+    FROM Compras c
+    INNER JOIN Proveedores p ON p.IdProveedor = c.IdProveedor
+    INNER JOIN Empleados e ON e.IdEmpleado = c.IdEmpleado
+    INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+    WHERE (@FechaDesde IS NULL OR CAST(c.FechaCompra AS date) >= @FechaDesde)
+      AND (@FechaHasta IS NULL OR CAST(c.FechaCompra AS date) <= @FechaHasta)
+      AND (@IdProveedor IS NULL OR c.IdProveedor = @IdProveedor)
+    ORDER BY c.FechaCompra DESC, c.IdCompra DESC;
 END;
 GO
 
--- sp_actualizarVenta: actualiza los datos principales de una venta existente.
-IF OBJECT_ID(N'dbo.sp_actualizarVenta', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_actualizarVenta;
-GO
 
-CREATE PROCEDURE dbo.sp_actualizarVenta
-    @IdVenta INT,
-    @IdCliente INT,
-    @IdEmpleado INT,
-    @IdMedioPago INT,
-    @IdEstadoVenta INT,
-    @Total DECIMAL(12,2)
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF @IdVenta IS NULL OR @IdVenta <= 0
-        THROW 50201, 'El id de venta es invalido.', 1;
-
-    IF @IdCliente IS NULL OR @IdCliente <= 0
-        THROW 50202, 'El cliente es invalido.', 1;
-
-    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
-        THROW 50203, 'El empleado es invalido.', 1;
-
-    IF @IdMedioPago IS NULL OR @IdMedioPago <= 0
-        THROW 50204, 'El medio de pago es invalido.', 1;
-
-    IF @IdEstadoVenta IS NULL OR @IdEstadoVenta <= 0
-        THROW 50205, 'El estado de venta es invalido.', 1;
-
-    IF @Total IS NULL OR @Total < 0
-        THROW 50206, 'El total es invalido.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM Ventas WHERE IdVenta = @IdVenta)
-        THROW 50207, 'No existe una venta con ese id.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM Clientes WHERE IdCliente = @IdCliente AND Activo = 1)
-        THROW 50208, 'El cliente indicado no existe o no esta activo.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado AND Activo = 1)
-        THROW 50209, 'El empleado indicado no existe o no esta activo.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM MediosPago WHERE IdMedioPago = @IdMedioPago AND Activo = 1)
-        THROW 50210, 'El medio de pago indicado no existe o no esta activo.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM EstadosVenta WHERE IdEstadoVenta = @IdEstadoVenta)
-        THROW 50211, 'No existe un estado de venta con ese id.', 1;
-
-    IF EXISTS (
-        SELECT 1
-        FROM EstadosVenta
-        WHERE IdEstadoVenta = @IdEstadoVenta
-          AND UPPER(Nombre) = 'CONFIRMADA'
-    )
-    AND NOT EXISTS (
-        SELECT 1
-        FROM DetalleVentas
-        WHERE IdVenta = @IdVenta
-    )
-        THROW 50212, 'No se puede confirmar una venta sin detalle.', 1;
-
-    UPDATE Ventas
-    SET IdCliente = @IdCliente,
-        IdEmpleado = @IdEmpleado,
-        IdMedioPago = @IdMedioPago,
-        IdEstadoVenta = @IdEstadoVenta,
-        Total = @Total
-    WHERE IdVenta = @IdVenta;
-
-    SELECT IdVenta, IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total
-    FROM Ventas
-    WHERE IdVenta = @IdVenta;
-END;
-GO
-
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06h_SP_DetalleCompras.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Detalle de compras
 
--- sp_registrarDetalleCompra: agrega un registro de detalle a una compra.
-CREATE PROCEDURE sp_registrarDetalleCompra
+------------------------------------------------------------------------------------------------
+-- SP_DetalleCompra_Registrar: agrega un registro de detalle a una compra.
+IF OBJECT_ID(N'dbo.SP_DetalleCompra_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleCompra_Registrar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleCompra_Registrar
     @IdCompra INT,
     @IdProducto INT,
     @Cantidad INT,
@@ -2177,8 +2286,13 @@ BEGIN
 END;
 GO
 
--- sp_actualizarDetalleCompra: actualiza una linea de detalle de compra.
-CREATE PROCEDURE sp_actualizarDetalleCompra
+------------------------------------------------------------------------------------------------
+-- SP_DetalleCompra_Actualizar: actualiza una linea de detalle de compra.
+IF OBJECT_ID(N'dbo.SP_DetalleCompra_Actualizar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleCompra_Actualizar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleCompra_Actualizar
     @IdDetalleCompra INT,
     @IdProducto INT,
     @Cantidad INT,
@@ -2273,8 +2387,13 @@ BEGIN
 END;
 GO
 
--- sp_eliminarDetalleCompra: elimina una linea de detalle de compra.
-CREATE PROCEDURE sp_eliminarDetalleCompra
+------------------------------------------------------------------------------------------------
+-- SP_DetalleCompra_Eliminar: elimina una linea de detalle de compra.
+IF OBJECT_ID(N'dbo.SP_DetalleCompra_Eliminar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleCompra_Eliminar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleCompra_Eliminar
     @IdDetalleCompra INT
 AS
 BEGIN
@@ -2320,10 +2439,20 @@ BEGIN
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06i_SP_DetalleVentas.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Detalle de ventas
 
--- sp_registrarDetalleVenta: agrega un registro de detalle a una venta.
-CREATE PROCEDURE sp_registrarDetalleVenta
+------------------------------------------------------------------------------------------------
+-- SP_DetalleVenta_Registrar: agrega un registro de detalle a una venta.
+IF OBJECT_ID(N'dbo.SP_DetalleVenta_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleVenta_Registrar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleVenta_Registrar
     @IdVenta INT,
     @IdProducto INT,
     @Cantidad INT
@@ -2404,19 +2533,20 @@ BEGIN
     VALUES (@IdVenta, @IdProducto, @Cantidad, @PrecioUnitario, @Subtotal);
 
     UPDATE Ventas
-    SET Total = ISNULL((
-        SELECT SUM(dv.Subtotal)
-        FROM DetalleVentas dv
-        WHERE dv.IdVenta = @IdVenta
-    ), 0)
+    SET Total = dbo.FN_Venta_CalcularTotal(@IdVenta)
     WHERE IdVenta = @IdVenta;
 
     PRINT 'Detalle de venta registrado';
 END;
 GO
 
--- sp_actualizarDetalleVenta: actualiza un registro de detalle de venta.
-CREATE PROCEDURE sp_actualizarDetalleVenta
+------------------------------------------------------------------------------------------------
+-- SP_DetalleVenta_Actualizar: actualiza un registro de detalle de venta.
+IF OBJECT_ID(N'dbo.SP_DetalleVenta_Actualizar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleVenta_Actualizar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleVenta_Actualizar
     @IdDetalleVenta INT,
     @IdProducto INT,
     @Cantidad INT
@@ -2505,19 +2635,20 @@ BEGIN
     WHERE IdDetalleVenta = @IdDetalleVenta;
 
     UPDATE Ventas
-    SET Total = ISNULL((
-        SELECT SUM(dv.Subtotal)
-        FROM DetalleVentas dv
-        WHERE dv.IdVenta = @IdVenta
-    ), 0)
+    SET Total = dbo.FN_Venta_CalcularTotal(@IdVenta)
     WHERE IdVenta = @IdVenta;
 
     PRINT 'Detalle de venta actualizado';
 END;
 GO
 
--- sp_eliminarDetalleVenta: elimina una linea de detalle de venta.
-CREATE PROCEDURE sp_eliminarDetalleVenta
+------------------------------------------------------------------------------------------------
+-- SP_DetalleVenta_Eliminar: elimina una linea de detalle de venta.
+IF OBJECT_ID(N'dbo.SP_DetalleVenta_Eliminar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleVenta_Eliminar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleVenta_Eliminar
     @IdDetalleVenta INT
 AS
 BEGIN
@@ -2559,19 +2690,21 @@ BEGIN
     WHERE IdDetalleVenta = @IdDetalleVenta;
 
     UPDATE Ventas
-    SET Total = ISNULL((
-        SELECT SUM(dv.Subtotal)
-        FROM DetalleVentas dv
-        WHERE dv.IdVenta = @IdVenta
-    ), 0)
+    SET Total = dbo.FN_Venta_CalcularTotal(@IdVenta)
     WHERE IdVenta = @IdVenta;
 
     PRINT 'Detalle de venta eliminado';
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06j_SP_Categorias.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
 -- Categorias
 
+------------------------------------------------------------------------------------------------
 -- SP_Categoria_Registrar
 IF OBJECT_ID(N'dbo.SP_Categoria_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Categoria_Registrar;
@@ -2611,7 +2744,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Categoria_Actualizar
 IF OBJECT_ID(N'dbo.SP_Categoria_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Categoria_Actualizar;
@@ -2659,7 +2792,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Categoria_Desactivar
 IF OBJECT_ID(N'dbo.SP_Categoria_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Categoria_Desactivar;
@@ -2684,7 +2817,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Categoria_Reactivar
 IF OBJECT_ID(N'dbo.SP_Categoria_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Categoria_Reactivar;
@@ -2709,6 +2842,10 @@ BEGIN
 END;
 GO
 
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06k_SP_Productos.sql
+------------------------------------------------------------------------------------------------
 -- Productos
 
 -- SP_Producto_Registrar
@@ -2856,135 +2993,6 @@ BEGIN
     WHERE IdProducto = SCOPE_IDENTITY();
 END;
 GO
-
-
--- SP_Producto_AjustarStock
-IF OBJECT_ID(N'dbo.SP_Producto_AjustarStock', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Producto_AjustarStock;
-GO
-
-CREATE PROCEDURE dbo.SP_Producto_AjustarStock
-    @IdProducto int,
-    @Operacion varchar(10),
-    @Cantidad int,
-    @IdEmpleado int = NULL,
-    @Motivo varchar(255) = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    DECLARE @IdTipoMovimientoStock int;
-    DECLARE @CantidadAAjustar int;
-
-    SET @Operacion = UPPER(LTRIM(RTRIM(@Operacion)));
-    SET @Motivo = LTRIM(RTRIM(@Motivo));
-
-    IF @IdProducto IS NULL OR @IdProducto <= 0
-        THROW 50071, 'El IdProducto es invalido.', 1;
-
-    IF NOT EXISTS (
-        SELECT 1
-        FROM Productos
-        WHERE IdProducto = @IdProducto
-          AND Activo = 1
-    )
-        THROW 50070, 'El producto indicado no existe o no esta activo.', 1;
-
-    IF @Operacion IS NULL OR @Operacion NOT IN ('SUMAR', 'RESTAR')
-        THROW 50072, 'La operacion de stock debe ser SUMAR o RESTAR.', 1;
-
-    IF @Cantidad IS NULL OR @Cantidad <= 0
-        THROW 50073, 'La cantidad del ajuste debe ser mayor a cero.', 1;
-
-    IF @IdEmpleado IS NOT NULL AND NOT EXISTS (
-        SELECT 1
-        FROM Empleados
-        WHERE IdEmpleado = @IdEmpleado
-          AND Activo = 1
-    )
-        THROW 50074, 'El empleado indicado no existe o no esta activo.', 1;
-
-    IF @Motivo = ''
-        SET @Motivo = NULL;
-
-    SET @CantidadAAjustar = CASE
-        WHEN @Operacion = 'SUMAR' THEN @Cantidad
-        ELSE -@Cantidad
-    END;
-
-    IF EXISTS (
-        SELECT 1
-        FROM Productos
-        WHERE IdProducto = @IdProducto
-          AND StockActual + @CantidadAAjustar < 0
-    )
-        THROW 50075, 'El ajuste no puede dejar stock negativo.', 1;
-
-    SELECT @IdTipoMovimientoStock = IdTipoMovimientoStock
-    FROM TiposMovimientoStock
-    WHERE Nombre = CASE
-        WHEN @Operacion = 'SUMAR' THEN 'Ajuste manual'
-        ELSE 'Ajuste negativo'
-    END;
-
-    IF @IdTipoMovimientoStock IS NULL
-        THROW 50076, 'No existe el tipo de movimiento de stock requerido.', 1;
-
-    BEGIN TRANSACTION;
-
-    BEGIN TRY
-        UPDATE Productos
-        SET StockActual = StockActual + @CantidadAAjustar
-        WHERE IdProducto = @IdProducto;
-
-        INSERT INTO MovimientosStock (
-            IdProducto,
-            IdTipoMovimientoStock,
-            IdEmpleado,
-            IdCompra,
-            IdVenta,
-            FechaMovimiento,
-            Cantidad,
-            Motivo
-        )
-        VALUES (
-            @IdProducto,
-            @IdTipoMovimientoStock,
-            @IdEmpleado,
-            NULL,
-            NULL,
-            SYSDATETIME(),
-            @Cantidad,
-            COALESCE(@Motivo, 'Ajuste manual de stock')
-        );
-
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0
-            ROLLBACK TRANSACTION;
-
-        THROW;
-    END CATCH;
-
-    SELECT
-        IdProducto,
-        IdCategoria,
-        IdMarca,
-        IdTalle,
-        IdColor,
-        CodigoProducto,
-        Nombre,
-        Descripcion,
-        PrecioVenta,
-        StockActual,
-        StockMinimo,
-        Activo
-    FROM Productos
-    WHERE IdProducto = @IdProducto;
-END;
-GO
-
 
 -- SP_Producto_Actualizar
 IF OBJECT_ID(N'dbo.SP_Producto_Actualizar', N'P') IS NOT NULL
@@ -3208,5 +3216,347 @@ BEGIN
 END;
 GO
 
-SELECT 'Script completo ejecutado correctamente.' AS Resultado;
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06k_SP_MovimientosStock.sql
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.SP_MovimientoStock_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_MovimientoStock_Registrar;
 GO
+
+CREATE PROCEDURE dbo.SP_MovimientoStock_Registrar
+    @IdProducto            INT,
+    @IdTipoMovimientoStock INT,
+    @IdEmpleado            INT,
+    @Cantidad              INT,
+    @Motivo                VARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @StockActual     INT;
+    DECLARE @NombreTipo      VARCHAR(50);
+    DECLARE @StockResultante INT;
+
+    IF @IdProducto IS NULL OR @IdProducto <= 0
+    BEGIN
+        RAISERROR('El id de producto es invÃƒÂ¡lido', 16, 1);
+        RETURN;
+    END
+
+    IF @IdTipoMovimientoStock IS NULL OR @IdTipoMovimientoStock <= 0
+    BEGIN
+        RAISERROR('El tipo de movimiento es invÃƒÂ¡lido', 16, 1);
+        RETURN;
+    END
+
+    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
+    BEGIN
+        RAISERROR('El id de empleado es invÃƒÂ¡lido', 16, 1);
+        RETURN;
+    END
+
+    IF @Cantidad IS NULL OR @Cantidad = 0
+    BEGIN
+        RAISERROR('La cantidad no puede ser cero ni nula', 16, 1);
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1 FROM Productos WHERE IdProducto = @IdProducto
+    )
+    BEGIN
+        RAISERROR('No existe un producto con ese id', 16, 1);
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1 FROM Productos WHERE IdProducto = @IdProducto AND Activo = 0
+    )
+    BEGIN
+        RAISERROR('El producto no estÃƒÂ¡ activo', 16, 1);
+        RETURN;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1 FROM TiposMovimientoStock WHERE IdTipoMovimientoStock = @IdTipoMovimientoStock
+    )
+    BEGIN
+        RAISERROR('No existe un tipo de movimiento con ese id', 16, 1);
+        RETURN;
+    END
+
+    -- Validar que el empleado exista y estÃƒÂ© activo
+    IF NOT EXISTS (
+        SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado
+    )
+    BEGIN
+        RAISERROR('No existe un empleado con ese id', 16, 1);
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado AND Activo = 0
+    )
+    BEGIN
+        RAISERROR('El empleado no estÃƒÂ¡ activo', 16, 1);
+        RETURN;
+    END
+
+    SELECT @NombreTipo = UPPER(Nombre)
+    FROM TiposMovimientoStock
+    WHERE IdTipoMovimientoStock = @IdTipoMovimientoStock;
+
+    IF @NombreTipo IN ('INGRESO POR COMPRA', 'EGRESO POR VENTA')
+    BEGIN
+        RAISERROR('Ese tipo de movimiento es gestionado automÃƒÂ¡ticamente por el sistema. Use un tipo de ajuste manual.', 16, 1);
+        RETURN;
+    END
+
+    SELECT @StockActual = StockActual
+    FROM Productos
+    WHERE IdProducto = @IdProducto;
+
+    -- Calcular el stock resultante.
+    -- Cantidad positiva = entrada; negativa = salida.
+    SET @StockResultante = @StockActual + @Cantidad;
+
+    -- Validar que el stock no quede negativo
+    IF @StockResultante < 0
+    BEGIN
+        RAISERROR('Stock insuficiente para aplicar el ajuste solicitado', 16, 1);
+        RETURN;
+    END
+
+    -- Todo validado: registrar el movimiento y actualizar el stock
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+            INSERT INTO MovimientosStock (
+                IdProducto,
+                IdTipoMovimientoStock,
+                IdEmpleado,
+                IdCompra,
+                IdVenta,
+                FechaMovimiento,
+                Cantidad,
+                Motivo
+            )
+            VALUES (
+                @IdProducto,
+                @IdTipoMovimientoStock,
+                @IdEmpleado,
+                NULL,
+                NULL,
+                SYSDATETIME(),
+                @Cantidad,
+                NULLIF(LTRIM(RTRIM(@Motivo)), '')
+            );
+
+            UPDATE Productos
+            SET StockActual = @StockResultante
+            WHERE IdProducto = @IdProducto;
+
+        COMMIT;
+        PRINT CONCAT(
+            'Movimiento registrado. Stock anterior: ', @StockActual,
+            ' | Ajuste: ', @Cantidad,
+            ' | Stock nuevo: ', @StockResultante
+        );
+    END TRY
+    BEGIN CATCH
+        ROLLBACK;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+------------------------------------------------------------------------------------------------
+-- Fuente: Scripts\06_Store_Procedures_Scripts\06l_SP_Ventas.sql
+------------------------------------------------------------------------------------------------
+-- Ventas
+
+-- sp_registrarVenta: registra la cabecera de una venta en estado pendiente.
+IF OBJECT_ID(N'dbo.sp_registrarVenta', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_registrarVenta;
+GO
+
+CREATE PROCEDURE dbo.sp_registrarVenta
+    @IdCliente INT,
+    @IdEmpleado INT,
+    @IdMedioPago INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @IdEstadoPendiente INT;
+    DECLARE @IdVenta INT;
+
+    IF @IdCliente IS NULL OR @IdCliente <= 0
+        THROW 50101, 'El cliente es invalido.', 1;
+
+    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
+        THROW 50102, 'El empleado es invalido.', 1;
+
+    IF @IdMedioPago IS NULL OR @IdMedioPago <= 0
+        THROW 50103, 'El medio de pago es invalido.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM Clientes WHERE IdCliente = @IdCliente AND Activo = 1)
+        THROW 50104, 'El cliente indicado no existe o no esta activo.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado AND Activo = 1)
+        THROW 50105, 'El empleado indicado no existe o no esta activo.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM MediosPago WHERE IdMedioPago = @IdMedioPago AND Activo = 1)
+        THROW 50106, 'El medio de pago indicado no existe o no esta activo.', 1;
+
+    SELECT @IdEstadoPendiente = IdEstadoVenta
+    FROM EstadosVenta
+    WHERE UPPER(Nombre) = 'PENDIENTE';
+
+    IF @IdEstadoPendiente IS NULL
+        THROW 50107, 'No existe el estado pendiente registrado en la base.', 1;
+
+    INSERT INTO Ventas (IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total)
+    VALUES (@IdCliente, @IdEmpleado, @IdMedioPago, @IdEstadoPendiente, SYSDATETIME(), 0);
+
+    SET @IdVenta = CONVERT(INT, SCOPE_IDENTITY());
+
+    SELECT IdVenta, IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total
+    FROM Ventas
+    WHERE IdVenta = @IdVenta;
+END;
+GO
+
+-- SP_Venta_Consultar: filtra ventas por fecha, cliente, empleado y medio de pago.
+IF OBJECT_ID(N'dbo.SP_Venta_Consultar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Venta_Consultar;
+GO
+
+CREATE PROCEDURE dbo.SP_Venta_Consultar
+    @FechaDesde DATE = NULL,
+    @FechaHasta DATE = NULL,
+    @IdCliente INT = NULL,
+    @IdEmpleado INT = NULL,
+    @IdMedioPago INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @FechaDesde IS NOT NULL AND @FechaHasta IS NOT NULL AND @FechaDesde > @FechaHasta
+        THROW 50301, 'Las fechas no cierran.', 1;
+
+    IF @IdCliente IS NOT NULL AND @IdCliente <= 0
+        THROW 50302, 'El cliente es invalido.', 1;
+
+    IF @IdEmpleado IS NOT NULL AND @IdEmpleado <= 0
+        THROW 50303, 'El empleado es invalido.', 1;
+
+    IF @IdMedioPago IS NOT NULL AND @IdMedioPago <= 0
+        THROW 50304, 'El medio de pago es invalido.', 1;
+
+    SELECT
+        v.IdVenta,
+        v.IdCliente,
+        c.Apellido + ', ' + c.Nombre AS Cliente,
+        v.IdEmpleado,
+        e.Apellido + ', ' + e.Nombre AS Empleado,
+        v.IdMedioPago,
+        mp.Nombre AS MedioPago,
+        v.IdEstadoVenta,
+        ev.Nombre AS Estado,
+        v.FechaVenta,
+        v.Total
+    FROM Ventas v
+    INNER JOIN Clientes c ON c.IdCliente = v.IdCliente
+    INNER JOIN Empleados e ON e.IdEmpleado = v.IdEmpleado
+    INNER JOIN MediosPago mp ON mp.IdMedioPago = v.IdMedioPago
+    INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta
+    WHERE (@FechaDesde IS NULL OR CAST(v.FechaVenta AS date) >= @FechaDesde)
+      AND (@FechaHasta IS NULL OR CAST(v.FechaVenta AS date) <= @FechaHasta)
+      AND (@IdCliente IS NULL OR v.IdCliente = @IdCliente)
+      AND (@IdEmpleado IS NULL OR v.IdEmpleado = @IdEmpleado)
+      AND (@IdMedioPago IS NULL OR v.IdMedioPago = @IdMedioPago)
+    ORDER BY v.FechaVenta DESC, v.IdVenta DESC;
+END;
+GO
+
+-- sp_actualizarVenta: actualiza los datos principales de una venta existente.
+IF OBJECT_ID(N'dbo.sp_actualizarVenta', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_actualizarVenta;
+GO
+
+CREATE PROCEDURE dbo.sp_actualizarVenta
+    @IdVenta INT,
+    @IdCliente INT,
+    @IdEmpleado INT,
+    @IdMedioPago INT,
+    @IdEstadoVenta INT,
+    @Total DECIMAL(12,2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @IdVenta IS NULL OR @IdVenta <= 0
+        THROW 50201, 'El id de venta es invalido.', 1;
+
+    IF @IdCliente IS NULL OR @IdCliente <= 0
+        THROW 50202, 'El cliente es invalido.', 1;
+
+    IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
+        THROW 50203, 'El empleado es invalido.', 1;
+
+    IF @IdMedioPago IS NULL OR @IdMedioPago <= 0
+        THROW 50204, 'El medio de pago es invalido.', 1;
+
+    IF @IdEstadoVenta IS NULL OR @IdEstadoVenta <= 0
+        THROW 50205, 'El estado de venta es invalido.', 1;
+
+    IF @Total IS NULL OR @Total < 0
+        THROW 50206, 'El total es invalido.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM Ventas WHERE IdVenta = @IdVenta)
+        THROW 50207, 'No existe una venta con ese id.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM Clientes WHERE IdCliente = @IdCliente AND Activo = 1)
+        THROW 50208, 'El cliente indicado no existe o no esta activo.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado AND Activo = 1)
+        THROW 50209, 'El empleado indicado no existe o no esta activo.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM MediosPago WHERE IdMedioPago = @IdMedioPago AND Activo = 1)
+        THROW 50210, 'El medio de pago indicado no existe o no esta activo.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM EstadosVenta WHERE IdEstadoVenta = @IdEstadoVenta)
+        THROW 50211, 'No existe un estado de venta con ese id.', 1;
+
+    IF EXISTS (
+        SELECT 1
+        FROM EstadosVenta
+        WHERE IdEstadoVenta = @IdEstadoVenta
+          AND UPPER(Nombre) = 'CONFIRMADA'
+    )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM DetalleVentas
+        WHERE IdVenta = @IdVenta
+    )
+        THROW 50212, 'No se puede confirmar una venta sin detalle.', 1;
+
+    UPDATE Ventas
+    SET IdCliente = @IdCliente,
+        IdEmpleado = @IdEmpleado,
+        IdMedioPago = @IdMedioPago,
+        IdEstadoVenta = @IdEstadoVenta,
+        Total = @Total
+    WHERE IdVenta = @IdVenta;
+
+    SELECT IdVenta, IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total
+    FROM Ventas
+    WHERE IdVenta = @IdVenta;
+END;
+GO
+
+

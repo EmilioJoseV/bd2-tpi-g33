@@ -285,12 +285,15 @@ BEGIN
 
     SELECT
         c.IdCompra,
+        c.IdProveedor,
+        p.RazonSocial AS Proveedor,
+        c.IdEmpleado,
+        e.Apellido + ', ' + e.Nombre AS Empleado,
+        c.IdEstadoCompra,
+        ec.Nombre AS Estado,
         c.FechaCompra,
         c.NumeroComprobante,
-        c.Total,
-        p.RazonSocial AS Proveedor,
-        e.Apellido + ', ' + e.Nombre AS Empleado,
-        ec.Nombre AS EstadoCompra
+        c.Total
     FROM Compras c
     INNER JOIN Proveedores p ON p.IdProveedor = c.IdProveedor
     INNER JOIN Empleados e ON e.IdEmpleado = c.IdEmpleado
@@ -298,6 +301,6 @@ BEGIN
     WHERE (@FechaDesde IS NULL OR CAST(c.FechaCompra AS date) >= @FechaDesde)
       AND (@FechaHasta IS NULL OR CAST(c.FechaCompra AS date) <= @FechaHasta)
       AND (@IdProveedor IS NULL OR c.IdProveedor = @IdProveedor)
-    ORDER BY c.FechaCompra, c.IdCompra;
+    ORDER BY c.FechaCompra DESC, c.IdCompra DESC;
 END;
 GO

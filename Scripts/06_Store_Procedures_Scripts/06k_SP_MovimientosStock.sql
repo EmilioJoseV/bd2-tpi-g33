@@ -19,19 +19,19 @@ BEGIN
 
     IF @IdProducto IS NULL OR @IdProducto <= 0
     BEGIN
-        RAISERROR('El id de producto es inválido', 16, 1);
+        RAISERROR('El id de producto es invÃ¡lido', 16, 1);
         RETURN;
     END
 
     IF @IdTipoMovimientoStock IS NULL OR @IdTipoMovimientoStock <= 0
     BEGIN
-        RAISERROR('El tipo de movimiento es inválido', 16, 1);
+        RAISERROR('El tipo de movimiento es invÃ¡lido', 16, 1);
         RETURN;
     END
 
     IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
     BEGIN
-        RAISERROR('El id de empleado es inválido', 16, 1);
+        RAISERROR('El id de empleado es invÃ¡lido', 16, 1);
         RETURN;
     END
 
@@ -53,7 +53,7 @@ BEGIN
         SELECT 1 FROM Productos WHERE IdProducto = @IdProducto AND Activo = 0
     )
     BEGIN
-        RAISERROR('El producto no está activo', 16, 1);
+        RAISERROR('El producto no estÃ¡ activo', 16, 1);
         RETURN;
     END
 
@@ -65,7 +65,7 @@ BEGIN
         RETURN;
     END
 
-    -- Validar que el empleado exista y esté activo
+    -- Validar que el empleado exista y estÃ© activo
     IF NOT EXISTS (
         SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado
     )
@@ -78,7 +78,7 @@ BEGIN
         SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado AND Activo = 0
     )
     BEGIN
-        RAISERROR('El empleado no está activo', 16, 1);
+        RAISERROR('El empleado no estÃ¡ activo', 16, 1);
         RETURN;
     END
 
@@ -88,7 +88,7 @@ BEGIN
 
     IF @NombreTipo IN ('INGRESO POR COMPRA', 'EGRESO POR VENTA')
     BEGIN
-        RAISERROR('Ese tipo de movimiento es gestionado automáticamente por el sistema. Use un tipo de ajuste manual.', 16, 1);
+        RAISERROR('Ese tipo de movimiento es gestionado automÃ¡ticamente por el sistema. Use un tipo de ajuste manual.', 16, 1);
         RETURN;
     END
 
@@ -147,105 +147,5 @@ BEGIN
         ROLLBACK;
         THROW;
     END CATCH;
-END;
-GO
-
-IF OBJECT_ID(N'dbo.TRG_Compra_RegistrarMovimientoStock', N'TR') IS NOT NULL
-    DROP TRIGGER dbo.TRG_Compra_RegistrarMovimientoStock;
-GO
-
-CREATE TRIGGER dbo.TRG_Compra_RegistrarMovimientoStock
-ON Compras
-AFTER UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    DECLARE @IdTipoIngreso INT;
-
-    SELECT @IdTipoIngreso = IdTipoMovimientoStock
-    FROM TiposMovimientoStock
-    WHERE UPPER(Nombre) = 'INGRESO POR COMPRA';
-
-    IF @IdTipoIngreso IS NULL
-        RETURN;
-
-    INSERT INTO MovimientosStock (
-        IdProducto,
-        IdTipoMovimientoStock,
-        IdEmpleado,
-        IdCompra,
-        IdVenta,
-        FechaMovimiento,
-        Cantidad,
-        Motivo
-    )
-    SELECT
-        dc.IdProducto,
-        @IdTipoIngreso,
-        i.IdEmpleado,
-        i.IdCompra,
-        NULL,
-        SYSDATETIME(),
-        dc.Cantidad,
-        CONCAT('Ingreso automático por confirmación de compra #', i.IdCompra)
-    FROM inserted i
-    INNER JOIN deleted d           ON d.IdCompra        = i.IdCompra
-    INNER JOIN EstadosCompra ecAnt ON ecAnt.IdEstadoCompra = d.IdEstadoCompra
-    INNER JOIN EstadosCompra ecNvo ON ecNvo.IdEstadoCompra = i.IdEstadoCompra
-    INNER JOIN DetalleCompras dc   ON dc.IdCompra        = i.IdCompra
-    WHERE i.IdEstadoCompra <> d.IdEstadoCompra
-      AND UPPER(ecAnt.Nombre) <> 'CONFIRMADA'
-      AND UPPER(ecNvo.Nombre)  = 'CONFIRMADA';
-END;
-GO
-
-IF OBJECT_ID(N'dbo.TRG_Venta_RegistrarMovimientoStock', N'TR') IS NOT NULL
-    DROP TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock;
-GO
-
-CREATE TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock
-ON Ventas
-AFTER UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    DECLARE @IdTipoEgreso INT;
-
-    SELECT @IdTipoEgreso = IdTipoMovimientoStock
-    FROM TiposMovimientoStock
-    WHERE UPPER(Nombre) = 'EGRESO POR VENTA';
-
-    IF @IdTipoEgreso IS NULL
-        RETURN;
-
-    INSERT INTO MovimientosStock (
-        IdProducto,
-        IdTipoMovimientoStock,
-        IdEmpleado,
-        IdCompra,
-        IdVenta,
-        FechaMovimiento,
-        Cantidad,
-        Motivo
-    )
-    SELECT
-        dv.IdProducto,
-        @IdTipoEgreso,
-        i.IdEmpleado,
-        NULL,
-        i.IdVenta,
-        SYSDATETIME(),
-        dv.Cantidad * -1,   -- negativo: es una salida
-        CONCAT('Egreso automático por confirmación de venta #', i.IdVenta)
-    FROM inserted i
-    INNER JOIN deleted d           ON d.IdVenta          = i.IdVenta
-    INNER JOIN EstadosVenta evAnt  ON evAnt.IdEstadoVenta  = d.IdEstadoVenta
-    INNER JOIN EstadosVenta evNvo  ON evNvo.IdEstadoVenta  = i.IdEstadoVenta
-    INNER JOIN DetalleVentas dv    ON dv.IdVenta           = i.IdVenta
-    WHERE i.IdEstadoVenta <> d.IdEstadoVenta
-      AND UPPER(evAnt.Nombre) <> 'CONFIRMADA'
-      AND UPPER(evNvo.Nombre)  = 'CONFIRMADA';
 END;
 GO

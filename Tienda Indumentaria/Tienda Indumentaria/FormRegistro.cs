@@ -342,7 +342,7 @@ namespace TiendaIndumentaria.App
             EjecutarRegistro(() =>
             {
                 Conexion.EjecutarProcedimientoConValidacion(
-                    "dbo.sp_registrarCliente",
+                    "dbo.SP_Cliente_Registrar",
                     "Cliente registrado",
                     ("@Apellido", ValorCampo("Apellido")),
                     ("@Nombre", ValorCampo("Nombre")),
@@ -367,7 +367,7 @@ namespace TiendaIndumentaria.App
             EjecutarRegistro(() =>
             {
                 Conexion.EjecutarProcedimientoConValidacion(
-                    "dbo.sp_actualizarCliente",
+                    "dbo.SP_Cliente_Actualizar",
                     "Cliente actualizado",
                     ("@IdCliente", _idRegistro.Value),
                     ("@Apellido", ValorCampo("Apellido")),

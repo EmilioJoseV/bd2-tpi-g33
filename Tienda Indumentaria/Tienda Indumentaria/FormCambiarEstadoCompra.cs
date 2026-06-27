@@ -133,7 +133,7 @@ namespace TiendaIndumentaria.App
             try
             {
                 Resultado = Conexion.EjecutarProcedimientoConValidacion(
-                    "dbo.sp_actualizarCompra",
+                    "dbo.SP_Compra_Actualizar",
                     "Compra actualizada",
                     ("@IdCompra", _idCompra),
                     ("@IdProveedor", _idProveedor),

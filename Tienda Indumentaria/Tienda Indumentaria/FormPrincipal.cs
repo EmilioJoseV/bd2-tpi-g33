@@ -16,7 +16,9 @@ namespace TiendaIndumentaria.App
         private MenuStrip _menuPrincipal = null!;
         private ToolStripMenuItem _menuPrincipalEditar = null!;
         private ToolStripMenuItem _menuPrincipalCambiarEstado = null!;
+        private ToolStripMenuItem _menuPrincipalVerDetalle = null!;
         private ContextMenuStrip _menuRegistro = null!;
+        private ToolStripMenuItem _menuVerDetalle = null!;
         private ToolStripMenuItem _menuEditar = null!;
         private ToolStripMenuItem _menuCambiarEstado = null!;
         private DataGridViewRow? _filaSeleccionada;
@@ -31,7 +33,15 @@ namespace TiendaIndumentaria.App
             ["FechaCompra"] = "Fecha",
             ["FechaMovimiento"] = "Fecha",
             ["TipoMovimiento"] = "Tipo movimiento",
-            ["CantidadAReponer"] = "Cantidad a reponer",
+            ["NombreProducto"] = "Producto",
+            ["CantidadPorDebajoDelMinimo"] = "Cantidad bajo minimo",
+            ["DiferenciaConMinimo"] = "Diferencia con minimo",
+            ["EstadoStock"] = "Estado stock",
+            ["OrigenMovimiento"] = "Origen",
+            ["NumeroComprobanteCompra"] = "Comprobante compra",
+            ["CantidadVendida"] = "Cantidad vendida",
+            ["TotalFacturado"] = "Total facturado",
+            ["ValorTotalInventarioDisponible"] = "Valor inventario",
             ["NumeroComprobante"] = "Comprobante"
         };
 
@@ -123,6 +133,9 @@ namespace TiendaIndumentaria.App
             };
             _grilla.CellClick += Grilla_CellClick;
 
+            _menuVerDetalle = new ToolStripMenuItem("Ver detalle");
+            _menuVerDetalle.Click += (_, _) => VerDetalleSeleccionado();
+
             _menuEditar = new ToolStripMenuItem("Editar");
             _menuEditar.Click += (_, _) => EditarRegistroSeleccionado();
 
@@ -130,6 +143,7 @@ namespace TiendaIndumentaria.App
             _menuCambiarEstado.Click += (_, _) => CambiarEstadoRegistroSeleccionado();
 
             _menuRegistro = new ContextMenuStrip();
+            _menuRegistro.Items.Add(_menuVerDetalle);
             _menuRegistro.Items.Add(_menuEditar);
             _menuRegistro.Items.Add(_menuCambiarEstado);
 
@@ -169,6 +183,8 @@ namespace TiendaIndumentaria.App
             registros.DropDownItems.Add(new ToolStripSeparator());
             _menuPrincipalEditar = CrearItemMenu("Editar seleccionado", EditarRegistroSeleccionado);
             _menuPrincipalCambiarEstado = CrearItemMenu("Activar/Inactivar seleccionado", CambiarEstadoRegistroSeleccionado);
+            _menuPrincipalVerDetalle = CrearItemMenu("Ver detalle seleccionado", VerDetalleSeleccionado);
+            registros.DropDownItems.Add(_menuPrincipalVerDetalle);
             registros.DropDownItems.Add(_menuPrincipalEditar);
             registros.DropDownItems.Add(_menuPrincipalCambiarEstado);
             registros.DropDownOpening += (_, _) => ActualizarMenuGestionSeleccion();
@@ -179,6 +195,7 @@ namespace TiendaIndumentaria.App
             productos.DropDownItems.Add(new ToolStripSeparator());
             productos.DropDownItems.Add(CrearItemMenu("Ver productos", () => SeleccionarApartado("Productos")));
             productos.DropDownItems.Add(CrearItemMenu("Productos bajo stock", () => SeleccionarApartado("ProductosBajoStock")));
+            productos.DropDownItems.Add(CrearItemMenu("Stock actual", () => SeleccionarApartado("StockActual")));
             productos.DropDownItems.Add(CrearItemMenu("Ver movimientos de stock", () => SeleccionarApartado("MovimientosStock")));
 
             var consultas = new ToolStripMenuItem("Consultas");
@@ -187,9 +204,17 @@ namespace TiendaIndumentaria.App
             consultas.DropDownItems.Add(CrearItemMenu("Empleados", () => SeleccionarApartado("Empleados")));
             consultas.DropDownItems.Add(CrearItemMenu("Productos", () => SeleccionarApartado("Productos")));
             consultas.DropDownItems.Add(CrearItemMenu("Productos bajo stock", () => SeleccionarApartado("ProductosBajoStock")));
+            consultas.DropDownItems.Add(CrearItemMenu("Stock actual", () => SeleccionarApartado("StockActual")));
             consultas.DropDownItems.Add(CrearItemMenu("Ventas", () => SeleccionarApartado("Ventas")));
+            consultas.DropDownItems.Add(CrearItemMenu("Filtrar ventas", AbrirConsultaVentas));
             consultas.DropDownItems.Add(CrearItemMenu("Compras", () => SeleccionarApartado("Compras")));
+            consultas.DropDownItems.Add(CrearItemMenu("Filtrar compras", AbrirConsultaCompras));
             consultas.DropDownItems.Add(CrearItemMenu("Movimientos de stock", () => SeleccionarApartado("MovimientosStock")));
+
+            var reportes = new ToolStripMenuItem("Reportes");
+            reportes.DropDownItems.Add(CrearItemMenu("Productos mas vendidos", () => SeleccionarApartado("ProductosMasVendidos")));
+            reportes.DropDownItems.Add(CrearItemMenu("Ventas mensuales", () => SeleccionarApartado("VentasMensuales")));
+            reportes.DropDownItems.Add(CrearItemMenu("Valor inventario", () => SeleccionarApartado("ValorInventario")));
 
             var configuracion = new ToolStripMenuItem("Configuracion");
             configuracion.DropDownItems.Add(CrearItemMenu("Nueva categoria", () => AbrirFormularioRegistro(TipoRegistro.Categoria)));
@@ -206,6 +231,7 @@ namespace TiendaIndumentaria.App
             menu.Items.Add(registros);
             menu.Items.Add(productos);
             menu.Items.Add(consultas);
+            menu.Items.Add(reportes);
             menu.Items.Add(configuracion);
             return menu;
         }
@@ -273,11 +299,20 @@ namespace TiendaIndumentaria.App
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Productos bajo stock",
-                "SELECT IdProducto, CodigoProducto, Producto, Categoria, Marca, Talle, Color, " +
-                "StockActual, StockMinimo, CantidadAReponer, PrecioVenta " +
-                "FROM dbo.vw_ProductosBajoStock " +
-                "ORDER BY CantidadAReponer DESC, Producto",
+                "SELECT IdProducto, CodigoProducto, Nombre, StockActual, StockMinimo, CantidadPorDebajoDelMinimo " +
+                "FROM dbo.VW_Producto_ConsultarStockBajoMinimo " +
+                "ORDER BY CantidadPorDebajoDelMinimo DESC, Nombre",
                 "ProductosBajoStock",
+                "IdProducto",
+                null));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Stock actual",
+                "SELECT IdProducto, CodigoProducto, Nombre, StockActual, StockMinimo, " +
+                "DiferenciaConMinimo, EstadoStock " +
+                "FROM dbo.VW_Producto_ConsultarStockActual " +
+                "ORDER BY EstadoStock DESC, Nombre",
+                "StockActual",
                 "IdProducto",
                 null));
 
@@ -342,19 +377,38 @@ namespace TiendaIndumentaria.App
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Movimientos de stock",
-                "SELECT ms.IdMovimientoStock, p.CodigoProducto AS Codigo, p.Nombre AS Producto, " +
-                "tms.Nombre AS TipoMovimiento, " +
-                "COALESCE(e.Apellido + ', ' + e.Nombre, '-') AS Empleado, " +
-                "COALESCE(CONVERT(varchar(20), ms.IdCompra), '-') AS Compra, " +
-                "COALESCE(CONVERT(varchar(20), ms.IdVenta), '-') AS Venta, " +
-                "ms.FechaMovimiento, ms.Cantidad, ms.Motivo " +
-                "FROM MovimientosStock ms " +
-                "INNER JOIN Productos p ON p.IdProducto = ms.IdProducto " +
-                "INNER JOIN TiposMovimientoStock tms ON tms.IdTipoMovimientoStock = ms.IdTipoMovimientoStock " +
-                "LEFT JOIN Empleados e ON e.IdEmpleado = ms.IdEmpleado " +
-                "ORDER BY ms.FechaMovimiento DESC, ms.IdMovimientoStock DESC",
+                "SELECT IdProducto, CodigoProducto, NombreProducto, TipoMovimiento, Empleado, " +
+                "OrigenMovimiento, NumeroComprobanteCompra, FechaMovimiento, Cantidad, Motivo " +
+                "FROM dbo.VW_Producto_ConsultarHistorialStock " +
+                "ORDER BY FechaMovimiento DESC, NombreProducto",
                 "MovimientosStock",
-                "IdMovimientoStock",
+                "IdProducto",
+                null));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Productos mas vendidos",
+                "SELECT IdProducto, CodigoProducto, NombreProducto, CantidadVendida, TotalFacturado " +
+                "FROM dbo.VW_Producto_ConsultarMasVendido " +
+                "ORDER BY CantidadVendida DESC, TotalFacturado DESC",
+                "ProductosMasVendidos",
+                "IdProducto",
+                null));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Ventas mensuales",
+                "SELECT Anio, Mes, CantidadVentas, TotalFacturado " +
+                "FROM dbo.VW_Venta_ConsultarMensual " +
+                "ORDER BY Anio DESC, Mes DESC",
+                "VentasMensuales",
+                "Anio",
+                null));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Valor inventario",
+                "SELECT ValorTotalInventarioDisponible " +
+                "FROM dbo.VW_Inventario_ConsultarValorTotal",
+                "ValorInventario",
+                "ValorTotalInventarioDisponible",
                 null));
 
             if (_comboConsultas.Items.Count > 0)
@@ -396,6 +450,7 @@ namespace TiendaIndumentaria.App
                 return;
 
             _filaSeleccionada = _grilla.Rows[e.RowIndex];
+            bool permiteVerDetalle = PermiteVerDetalleSeleccion();
             bool permiteEditar = PermiteEditarSeleccion();
             bool permiteCambiarEstado = PermiteCambiarEstadoSeleccion();
             bool esVenta = ObtenerOpcionActual()?.TipoRegistro == TipoRegistro.Venta;
@@ -403,13 +458,14 @@ namespace TiendaIndumentaria.App
             bool esOperacion = esVenta || esCompra;
             bool estaActivo = !esOperacion && ObtenerActivo(_filaSeleccionada);
 
+            _menuVerDetalle.Enabled = permiteVerDetalle;
             _menuEditar.Enabled = permiteEditar;
             _menuCambiarEstado.Enabled = permiteCambiarEstado;
             _menuCambiarEstado.Text = esOperacion
                 ? "Cambiar estado"
                 : estaActivo ? "Inactivar" : "Activar";
 
-            if (!permiteEditar && !permiteCambiarEstado)
+            if (!permiteVerDetalle && !permiteEditar && !permiteCambiarEstado)
                 return;
 
             _menuRegistro.Show(_grilla, _grilla.PointToClient(Cursor.Position));
@@ -436,16 +492,24 @@ namespace TiendaIndumentaria.App
                 PermiteEditarSeleccion();
         }
 
+        private bool PermiteVerDetalleSeleccion()
+        {
+            TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
+            return tipo == TipoRegistro.Venta || tipo == TipoRegistro.Compra;
+        }
+
         private void ActualizarMenuGestionSeleccion()
         {
             TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
             bool esVenta = tipo == TipoRegistro.Venta;
             bool esCompra = tipo == TipoRegistro.Compra;
             bool esOperacion = esVenta || esCompra;
+            bool permiteVerDetalle = _filaSeleccionada != null && PermiteVerDetalleSeleccion();
             bool permiteEditar = _filaSeleccionada != null && PermiteEditarSeleccion();
             bool permiteCambiarEstado = _filaSeleccionada != null && PermiteCambiarEstadoSeleccion();
             bool estaActivo = _filaSeleccionada != null && !esOperacion && ObtenerActivo(_filaSeleccionada);
 
+            _menuPrincipalVerDetalle.Enabled = permiteVerDetalle;
             _menuPrincipalEditar.Enabled = permiteEditar;
             _menuPrincipalCambiarEstado.Enabled = permiteCambiarEstado;
             _menuPrincipalCambiarEstado.Text = esOperacion
@@ -516,6 +580,43 @@ namespace TiendaIndumentaria.App
 
                 RefrescarConsultaActual($"{MayusculaInicial(entidad)} {(estaActivo ? "inactivado" : "activado")} correctamente.");
             });
+        }
+
+        private void VerDetalleSeleccionado()
+        {
+            OpcionConsulta? opcion = ObtenerOpcionActual();
+            if (opcion == null || _filaSeleccionada == null || !PermiteVerDetalleSeleccion())
+                return;
+
+            if (!TryObtenerIdSeleccionado(opcion, out int idRegistro))
+                return;
+
+            using (var formulario = new FormDetalleOperacion(opcion.TipoRegistro!.Value, idRegistro))
+                formulario.ShowDialog(this);
+        }
+
+        private void AbrirConsultaVentas()
+        {
+            using (var formulario = new FormConsultaVentas())
+            {
+                if (formulario.ShowDialog(this) != DialogResult.OK || formulario.Resultado == null)
+                    return;
+
+                SeleccionarApartado("Ventas");
+                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+            }
+        }
+
+        private void AbrirConsultaCompras()
+        {
+            using (var formulario = new FormConsultaCompras())
+            {
+                if (formulario.ShowDialog(this) != DialogResult.OK || formulario.Resultado == null)
+                    return;
+
+                SeleccionarApartado("Compras");
+                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+            }
         }
 
         private void AbrirFormularioRegistro(TipoRegistro tipoRegistro)
@@ -917,7 +1018,7 @@ namespace TiendaIndumentaria.App
                         return;
 
                     Conexion.EjecutarProcedimientoConValidacion(
-                        "dbo.sp_actualizarCliente",
+                        "dbo.SP_Cliente_Actualizar",
                         "Cliente actualizado",
                         ("@IdCliente", idRegistro),
                         ("@Apellido", Texto(fila, "Apellido")),

@@ -52,6 +52,59 @@ BEGIN
 END;
 GO
 
+-- SP_Venta_Consultar: filtra ventas por fecha, cliente, empleado y medio de pago.
+IF OBJECT_ID(N'dbo.SP_Venta_Consultar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Venta_Consultar;
+GO
+
+CREATE PROCEDURE dbo.SP_Venta_Consultar
+    @FechaDesde DATE = NULL,
+    @FechaHasta DATE = NULL,
+    @IdCliente INT = NULL,
+    @IdEmpleado INT = NULL,
+    @IdMedioPago INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @FechaDesde IS NOT NULL AND @FechaHasta IS NOT NULL AND @FechaDesde > @FechaHasta
+        THROW 50301, 'Las fechas no cierran.', 1;
+
+    IF @IdCliente IS NOT NULL AND @IdCliente <= 0
+        THROW 50302, 'El cliente es invalido.', 1;
+
+    IF @IdEmpleado IS NOT NULL AND @IdEmpleado <= 0
+        THROW 50303, 'El empleado es invalido.', 1;
+
+    IF @IdMedioPago IS NOT NULL AND @IdMedioPago <= 0
+        THROW 50304, 'El medio de pago es invalido.', 1;
+
+    SELECT
+        v.IdVenta,
+        v.IdCliente,
+        c.Apellido + ', ' + c.Nombre AS Cliente,
+        v.IdEmpleado,
+        e.Apellido + ', ' + e.Nombre AS Empleado,
+        v.IdMedioPago,
+        mp.Nombre AS MedioPago,
+        v.IdEstadoVenta,
+        ev.Nombre AS Estado,
+        v.FechaVenta,
+        v.Total
+    FROM Ventas v
+    INNER JOIN Clientes c ON c.IdCliente = v.IdCliente
+    INNER JOIN Empleados e ON e.IdEmpleado = v.IdEmpleado
+    INNER JOIN MediosPago mp ON mp.IdMedioPago = v.IdMedioPago
+    INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta
+    WHERE (@FechaDesde IS NULL OR CAST(v.FechaVenta AS date) >= @FechaDesde)
+      AND (@FechaHasta IS NULL OR CAST(v.FechaVenta AS date) <= @FechaHasta)
+      AND (@IdCliente IS NULL OR v.IdCliente = @IdCliente)
+      AND (@IdEmpleado IS NULL OR v.IdEmpleado = @IdEmpleado)
+      AND (@IdMedioPago IS NULL OR v.IdMedioPago = @IdMedioPago)
+    ORDER BY v.FechaVenta DESC, v.IdVenta DESC;
+END;
+GO
+
 -- sp_actualizarVenta: actualiza los datos principales de una venta existente.
 IF OBJECT_ID(N'dbo.sp_actualizarVenta', N'P') IS NOT NULL
     DROP PROCEDURE dbo.sp_actualizarVenta;
