@@ -86,11 +86,7 @@ BEGIN
     VALUES (@IdVenta, @IdProducto, @Cantidad, @PrecioUnitario, @Subtotal);
 
     UPDATE Ventas
-    SET Total = ISNULL((
-        SELECT SUM(dv.Subtotal)
-        FROM DetalleVentas dv
-        WHERE dv.IdVenta = @IdVenta
-    ), 0)
+    SET Total = dbo.FN_Venta_CalcularTotal(@IdVenta)
     WHERE IdVenta = @IdVenta;
 
     PRINT 'Detalle de venta registrado';
@@ -191,11 +187,7 @@ BEGIN
     WHERE IdDetalleVenta = @IdDetalleVenta;
 
     UPDATE Ventas
-    SET Total = ISNULL((
-        SELECT SUM(dv.Subtotal)
-        FROM DetalleVentas dv
-        WHERE dv.IdVenta = @IdVenta
-    ), 0)
+    SET Total = dbo.FN_Venta_CalcularTotal(@IdVenta)
     WHERE IdVenta = @IdVenta;
 
     PRINT 'Detalle de venta actualizado';
@@ -249,11 +241,7 @@ BEGIN
     WHERE IdDetalleVenta = @IdDetalleVenta;
 
     UPDATE Ventas
-    SET Total = ISNULL((
-        SELECT SUM(dv.Subtotal)
-        FROM DetalleVentas dv
-        WHERE dv.IdVenta = @IdVenta
-    ), 0)
+    SET Total = dbo.FN_Venta_CalcularTotal(@IdVenta)
     WHERE IdVenta = @IdVenta;
 
     PRINT 'Detalle de venta eliminado';

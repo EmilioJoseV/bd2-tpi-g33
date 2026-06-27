@@ -59,6 +59,9 @@ proveedor.
 - Calcular el valor total del inventario disponible.
 - Validar operaciones críticas, como evitar ventas sin stock suficiente.
 
+Notas:
+- Para ejecutar todos los scripts TSQL en SQL Server ejecutar el comando en Powershell: 'sqlcmd -S . -E -i "Scripts\00_EJECUTAR_TODO.sql"'
+
 ## Integrantes
 
 Emilio Vera, Francisco Garcia, Jesus Farias
