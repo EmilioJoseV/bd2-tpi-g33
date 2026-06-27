@@ -188,7 +188,7 @@ BEGIN
         NULL,
         i.IdVenta,
         SYSDATETIME(),
-        dv.Cantidad * -1,   -- negativo: es una salida
+        dv.Cantidad,
         CONCAT('Egreso automatico por confirmacion de venta #', i.IdVenta)
     FROM inserted i
     INNER JOIN deleted d           ON d.IdVenta          = i.IdVenta
