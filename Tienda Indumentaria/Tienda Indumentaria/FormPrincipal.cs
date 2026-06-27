@@ -592,7 +592,12 @@ namespace TiendaIndumentaria.App
                 return;
 
             using (var formulario = new FormDetalleOperacion(opcion.TipoRegistro!.Value, idRegistro))
+            {
                 formulario.ShowDialog(this);
+
+                if (formulario.HuboCambios)
+                    RefrescarConsultaActual("Detalle actualizado correctamente.");
+            }
         }
 
         private void AbrirConsultaVentas()

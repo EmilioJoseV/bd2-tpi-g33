@@ -145,53 +145,6 @@ BEGIN
 END;
 GO
 
-------------------------------------------------------------------------------------------------
--- SP_Proveedor_ActualizarContacto (Mantener sus datos de contacto: solo Email, Telefono y Direccion.)
-IF OBJECT_ID(N'dbo.SP_Proveedor_ActualizarContacto', N'P') IS NOT NULL
-    DROP PROCEDURE dbo.SP_Proveedor_ActualizarContacto;
-GO
-
-CREATE PROCEDURE dbo.SP_Proveedor_ActualizarContacto
-    @IdProveedor int,
-    @Email       varchar(150) = NULL,
-    @Telefono    varchar(30)  = NULL,
-    @Direccion   varchar(200) = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    SET @Email = LTRIM(RTRIM(@Email));
-    SET @Telefono = LTRIM(RTRIM(@Telefono));
-    SET @Direccion = LTRIM(RTRIM(@Direccion));
-
-    IF @IdProveedor IS NULL OR @IdProveedor <= 0
-        THROW 50005, 'El IdProveedor es invalido.', 1;
-
-    IF @Email = ''
-        SET @Email = NULL;
-
-    IF @Telefono = ''
-        SET @Telefono = NULL;
-
-    IF @Direccion = ''
-        SET @Direccion = NULL;
-
-    IF NOT EXISTS (SELECT 1 FROM Proveedores WHERE IdProveedor = @IdProveedor)
-        THROW 50004, 'El proveedor indicado no existe.', 1;
-
-    UPDATE Proveedores
-    SET Email     = @Email,
-        Telefono  = @Telefono,
-        Direccion = @Direccion
-    WHERE IdProveedor = @IdProveedor;
-
-    SELECT IdProveedor, RazonSocial, CUIT, Email, Telefono, Direccion, Activo
-    FROM Proveedores
-    WHERE IdProveedor = @IdProveedor;
-END;
-GO
-
-------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Desactivar (Baja logica.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Desactivar;
