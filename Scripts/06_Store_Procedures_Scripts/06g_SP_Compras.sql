@@ -15,6 +15,7 @@ CREATE PROCEDURE dbo.SP_Compra_Registrar
 AS
 BEGIN
     DECLARE @IdEstadoPendiente INT;
+    DECLARE @IdCompra INT;
 
 -- Limpiar espacios en blanco del numero de comprobante
     SET @NumeroComprobante = LTRIM(RTRIM(@NumeroComprobante));
@@ -98,6 +99,12 @@ BEGIN
 -- Registrar la compra arrancando siempre en pendiente.
     INSERT INTO Compras (IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total)
     VALUES (@IdProveedor, @IdEmpleado, @IdEstadoPendiente, SYSDATETIME(), @NumeroComprobante, @Total);
+
+    SET @IdCompra = CONVERT(INT, SCOPE_IDENTITY());
+
+    SELECT IdCompra, IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total
+    FROM Compras
+    WHERE IdCompra = @IdCompra;
 
     PRINT 'Compra registrada';
 END;
@@ -243,6 +250,10 @@ BEGIN
         Total = @Total
     WHERE IdCompra = @IdCompra;
 
+    SELECT IdCompra, IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total
+    FROM Compras
+    WHERE IdCompra = @IdCompra;
+
     PRINT 'Compra actualizada';
 END;
 GO
@@ -274,12 +285,15 @@ BEGIN
 
     SELECT
         c.IdCompra,
+        c.IdProveedor,
+        p.RazonSocial AS Proveedor,
+        c.IdEmpleado,
+        e.Apellido + ', ' + e.Nombre AS Empleado,
+        c.IdEstadoCompra,
+        ec.Nombre AS Estado,
         c.FechaCompra,
         c.NumeroComprobante,
-        c.Total,
-        p.RazonSocial AS Proveedor,
-        e.Apellido + ', ' + e.Nombre AS Empleado,
-        ec.Nombre AS EstadoCompra
+        c.Total
     FROM Compras c
     INNER JOIN Proveedores p ON p.IdProveedor = c.IdProveedor
     INNER JOIN Empleados e ON e.IdEmpleado = c.IdEmpleado
@@ -287,6 +301,6 @@ BEGIN
     WHERE (@FechaDesde IS NULL OR CAST(c.FechaCompra AS date) >= @FechaDesde)
       AND (@FechaHasta IS NULL OR CAST(c.FechaCompra AS date) <= @FechaHasta)
       AND (@IdProveedor IS NULL OR c.IdProveedor = @IdProveedor)
-    ORDER BY c.FechaCompra, c.IdCompra;
+    ORDER BY c.FechaCompra DESC, c.IdCompra DESC;
 END;
 GO

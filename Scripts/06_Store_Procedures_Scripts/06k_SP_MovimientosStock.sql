@@ -19,19 +19,19 @@ BEGIN
 
     IF @IdProducto IS NULL OR @IdProducto <= 0
     BEGIN
-        RAISERROR('El id de producto es inválido', 16, 1);
+        RAISERROR('El id de producto es invÃ¡lido', 16, 1);
         RETURN;
     END
 
     IF @IdTipoMovimientoStock IS NULL OR @IdTipoMovimientoStock <= 0
     BEGIN
-        RAISERROR('El tipo de movimiento es inválido', 16, 1);
+        RAISERROR('El tipo de movimiento es invÃ¡lido', 16, 1);
         RETURN;
     END
 
     IF @IdEmpleado IS NULL OR @IdEmpleado <= 0
     BEGIN
-        RAISERROR('El id de empleado es inválido', 16, 1);
+        RAISERROR('El id de empleado es invÃ¡lido', 16, 1);
         RETURN;
     END
 
@@ -53,7 +53,7 @@ BEGIN
         SELECT 1 FROM Productos WHERE IdProducto = @IdProducto AND Activo = 0
     )
     BEGIN
-        RAISERROR('El producto no está activo', 16, 1);
+        RAISERROR('El producto no estÃ¡ activo', 16, 1);
         RETURN;
     END
 
@@ -65,7 +65,7 @@ BEGIN
         RETURN;
     END
 
-    -- Validar que el empleado exista y esté activo
+    -- Validar que el empleado exista y estÃ© activo
     IF NOT EXISTS (
         SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado
     )
@@ -78,7 +78,7 @@ BEGIN
         SELECT 1 FROM Empleados WHERE IdEmpleado = @IdEmpleado AND Activo = 0
     )
     BEGIN
-        RAISERROR('El empleado no está activo', 16, 1);
+        RAISERROR('El empleado no estÃ¡ activo', 16, 1);
         RETURN;
     END
 
@@ -88,7 +88,7 @@ BEGIN
 
     IF @NombreTipo IN ('INGRESO POR COMPRA', 'EGRESO POR VENTA')
     BEGIN
-        RAISERROR('Ese tipo de movimiento es gestionado automáticamente por el sistema. Use un tipo de ajuste manual.', 16, 1);
+        RAISERROR('Ese tipo de movimiento es gestionado automÃ¡ticamente por el sistema. Use un tipo de ajuste manual.', 16, 1);
         RETURN;
     END
 
