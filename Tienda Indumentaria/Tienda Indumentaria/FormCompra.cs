@@ -40,9 +40,9 @@ namespace TiendaIndumentaria.App
         private void ConstruirInterfaz()
         {
             Text = "Registrar compra";
-            Width = 820;
+            Width = 900;
             Height = 620;
-            MinimumSize = new Size(820, 620);
+            MinimumSize = new Size(900, 620);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -88,12 +88,12 @@ namespace TiendaIndumentaria.App
                 Margin = new Padding(0)
             };
             panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 78));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108));
+            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 48));
+            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92));
+            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 58));
+            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
             panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
+            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
 
             panelProducto.Controls.Add(_listaProductos, 0, 0);
             panelProducto.Controls.Add(CrearEtiquetaInline("Cant."), 1, 0);
@@ -251,17 +251,18 @@ namespace TiendaIndumentaria.App
         private void CargarProductos()
         {
             _productos = Conexion.EjecutarConsulta(
-                "SELECT IdProducto, CodigoProducto, Nombre, PrecioVenta " +
+                "SELECT IdProducto, Nombre, PrecioVenta " +
                 "FROM Productos WHERE Activo = 1 ORDER BY Nombre");
 
             _productos.Columns.Add("DescripcionLista", typeof(string));
             foreach (DataRow fila in _productos.Rows)
             {
-                fila["DescripcionLista"] = $"{fila["CodigoProducto"]} - {fila["Nombre"]}";
+                fila["DescripcionLista"] = Convert.ToString(fila["Nombre"]) ?? string.Empty;
             }
 
             AgregarOpcionSeleccion(_productos, "IdProducto", "DescripcionLista", "Seleccione producto...");
             ConfigurarLista(_listaProductos, _productos, "DescripcionLista", "IdProducto");
+            _listaProductos.DropDownWidth = 360;
         }
 
         private void SugerirPrecioProducto()

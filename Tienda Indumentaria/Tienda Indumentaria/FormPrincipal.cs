@@ -20,6 +20,17 @@ namespace TiendaIndumentaria.App
         private ToolStripMenuItem _menuEditar = null!;
         private ToolStripMenuItem _menuCambiarEstado = null!;
         private DataGridViewRow? _filaSeleccionada;
+        private static readonly Dictionary<string, string> TitulosColumnas = new Dictionary<string, string>
+        {
+            ["CodigoProducto"] = "Codigo",
+            ["PrecioVenta"] = "Precio venta",
+            ["StockActual"] = "Stock actual",
+            ["StockMinimo"] = "Stock minimo",
+            ["MedioPago"] = "Medio pago",
+            ["FechaVenta"] = "Fecha",
+            ["FechaCompra"] = "Fecha",
+            ["NumeroComprobante"] = "Comprobante"
+        };
 
         public FormPrincipal()
         {
@@ -239,8 +250,16 @@ namespace TiendaIndumentaria.App
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Productos",
-                "SELECT IdProducto, IdCategoria, IdMarca, IdTalle, IdColor, CodigoProducto, Nombre, Descripcion, PrecioVenta, StockActual, StockMinimo, Activo " +
-                "FROM Productos ORDER BY Nombre",
+                "SELECT p.IdProducto, p.IdCategoria, c.Nombre AS Categoria, " +
+                "p.IdMarca, m.Nombre AS Marca, p.IdTalle, t.Nombre AS Talle, " +
+                "p.IdColor, co.Nombre AS Color, p.CodigoProducto, p.Nombre, p.Descripcion, " +
+                "p.PrecioVenta, p.StockActual, p.StockMinimo, p.Activo " +
+                "FROM Productos p " +
+                "INNER JOIN Categorias c ON c.IdCategoria = p.IdCategoria " +
+                "INNER JOIN Marcas m ON m.IdMarca = p.IdMarca " +
+                "INNER JOIN Talles t ON t.IdTalle = p.IdTalle " +
+                "INNER JOIN Colores co ON co.IdColor = p.IdColor " +
+                "ORDER BY p.Nombre",
                 "Productos",
                 "IdProducto",
                 TipoRegistro.Producto));
@@ -275,16 +294,31 @@ namespace TiendaIndumentaria.App
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Ventas",
-                "SELECT IdVenta, IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total " +
-                "FROM Ventas ORDER BY FechaVenta DESC",
+                "SELECT v.IdVenta, v.IdCliente, c.Apellido + ', ' + c.Nombre AS Cliente, " +
+                "v.IdEmpleado, e.Apellido + ', ' + e.Nombre AS Empleado, " +
+                "v.IdMedioPago, mp.Nombre AS MedioPago, v.IdEstadoVenta, ev.Nombre AS Estado, " +
+                "v.FechaVenta, v.Total " +
+                "FROM Ventas v " +
+                "INNER JOIN Clientes c ON c.IdCliente = v.IdCliente " +
+                "INNER JOIN Empleados e ON e.IdEmpleado = v.IdEmpleado " +
+                "INNER JOIN MediosPago mp ON mp.IdMedioPago = v.IdMedioPago " +
+                "INNER JOIN EstadosVenta ev ON ev.IdEstadoVenta = v.IdEstadoVenta " +
+                "ORDER BY v.FechaVenta DESC",
                 "Ventas",
                 "IdVenta",
                 TipoRegistro.Venta));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
                 "Compras",
-                "SELECT IdCompra, IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total " +
-                "FROM Compras ORDER BY FechaCompra DESC",
+                "SELECT cmp.IdCompra, cmp.IdProveedor, p.RazonSocial AS Proveedor, " +
+                "cmp.IdEmpleado, e.Apellido + ', ' + e.Nombre AS Empleado, " +
+                "cmp.IdEstadoCompra, ec.Nombre AS Estado, cmp.FechaCompra, " +
+                "cmp.NumeroComprobante, cmp.Total " +
+                "FROM Compras cmp " +
+                "INNER JOIN Proveedores p ON p.IdProveedor = cmp.IdProveedor " +
+                "INNER JOIN Empleados e ON e.IdEmpleado = cmp.IdEmpleado " +
+                "INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = cmp.IdEstadoCompra " +
+                "ORDER BY cmp.FechaCompra DESC",
                 "Compras",
                 "IdCompra",
                 TipoRegistro.Compra));
@@ -331,11 +365,13 @@ namespace TiendaIndumentaria.App
             bool permiteEditar = PermiteEditarSeleccion();
             bool permiteCambiarEstado = PermiteCambiarEstadoSeleccion();
             bool esVenta = ObtenerOpcionActual()?.TipoRegistro == TipoRegistro.Venta;
-            bool estaActivo = !esVenta && ObtenerActivo(_filaSeleccionada);
+            bool esCompra = ObtenerOpcionActual()?.TipoRegistro == TipoRegistro.Compra;
+            bool esOperacion = esVenta || esCompra;
+            bool estaActivo = !esOperacion && ObtenerActivo(_filaSeleccionada);
 
             _menuEditar.Enabled = permiteEditar;
             _menuCambiarEstado.Enabled = permiteCambiarEstado;
-            _menuCambiarEstado.Text = esVenta
+            _menuCambiarEstado.Text = esOperacion
                 ? "Cambiar estado"
                 : estaActivo ? "Inactivar" : "Activar";
             _menuRegistro.Show(_grilla, _grilla.PointToClient(Cursor.Position));
@@ -357,20 +393,24 @@ namespace TiendaIndumentaria.App
         private bool PermiteCambiarEstadoSeleccion()
         {
             TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
-            return tipo == TipoRegistro.Venta || PermiteEditarSeleccion();
+            return tipo == TipoRegistro.Venta ||
+                tipo == TipoRegistro.Compra ||
+                PermiteEditarSeleccion();
         }
 
         private void ActualizarMenuGestionSeleccion()
         {
             TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
             bool esVenta = tipo == TipoRegistro.Venta;
+            bool esCompra = tipo == TipoRegistro.Compra;
+            bool esOperacion = esVenta || esCompra;
             bool permiteEditar = _filaSeleccionada != null && PermiteEditarSeleccion();
             bool permiteCambiarEstado = _filaSeleccionada != null && PermiteCambiarEstadoSeleccion();
-            bool estaActivo = _filaSeleccionada != null && !esVenta && ObtenerActivo(_filaSeleccionada);
+            bool estaActivo = _filaSeleccionada != null && !esOperacion && ObtenerActivo(_filaSeleccionada);
 
             _menuPrincipalEditar.Enabled = permiteEditar;
             _menuPrincipalCambiarEstado.Enabled = permiteCambiarEstado;
-            _menuPrincipalCambiarEstado.Text = esVenta
+            _menuPrincipalCambiarEstado.Text = esOperacion
                 ? "Cambiar estado seleccionado"
                 : estaActivo ? "Inactivar seleccionado" : "Activar seleccionado";
         }
@@ -395,7 +435,7 @@ namespace TiendaIndumentaria.App
                 if (formulario.ShowDialog(this) != DialogResult.OK || formulario.Resultado == null)
                     return;
 
-                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+                RefrescarConsultaActual(formulario.MensajeResultado);
             }
         }
 
@@ -411,6 +451,12 @@ namespace TiendaIndumentaria.App
             if (opcion.TipoRegistro == TipoRegistro.Venta)
             {
                 AbrirFormularioCambioEstadoVenta(idRegistro, _filaSeleccionada);
+                return;
+            }
+
+            if (opcion.TipoRegistro == TipoRegistro.Compra)
+            {
+                AbrirFormularioCambioEstadoCompra(idRegistro, _filaSeleccionada);
                 return;
             }
 
@@ -448,7 +494,7 @@ namespace TiendaIndumentaria.App
                 }
 
                 SeleccionarApartado(EntidadParaRegistro(tipoRegistro));
-                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+                RefrescarConsultaActual(formulario.MensajeResultado);
             }
         }
 
@@ -466,7 +512,7 @@ namespace TiendaIndumentaria.App
                 }
 
                 SeleccionarApartado("Ventas");
-                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+                RefrescarConsultaActual(formulario.MensajeResultado);
             }
         }
 
@@ -478,7 +524,7 @@ namespace TiendaIndumentaria.App
                     return;
 
                 SeleccionarApartado("Productos");
-                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+                RefrescarConsultaActual(formulario.MensajeResultado);
             }
         }
 
@@ -496,7 +542,7 @@ namespace TiendaIndumentaria.App
                 }
 
                 SeleccionarApartado("Compras");
-                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+                RefrescarConsultaActual(formulario.MensajeResultado);
             }
         }
 
@@ -527,7 +573,38 @@ namespace TiendaIndumentaria.App
                 if (formulario.ShowDialog(this) != DialogResult.OK || formulario.Resultado == null)
                     return;
 
-                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+                RefrescarConsultaActual(formulario.MensajeResultado);
+            }
+        }
+
+        private void AbrirFormularioCambioEstadoCompra(int idCompra, DataGridViewRow fila)
+        {
+            if (!TryObtenerEnteroFila(fila, "IdProveedor", out int idProveedor) ||
+                !TryObtenerEnteroFila(fila, "IdEmpleado", out int idEmpleado) ||
+                !TryObtenerEnteroFila(fila, "IdEstadoCompra", out int idEstadoCompra) ||
+                !TryObtenerDecimalFila(fila, "Total", out decimal total))
+            {
+                MessageBox.Show(
+                    "No se pudo leer la compra seleccionada.",
+                    "Compra requerida",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            string numeroComprobante = Texto(fila, "NumeroComprobante");
+            using (var formulario = new FormCambiarEstadoCompra(
+                idCompra,
+                idProveedor,
+                idEmpleado,
+                idEstadoCompra,
+                string.IsNullOrWhiteSpace(numeroComprobante) ? null : numeroComprobante,
+                total))
+            {
+                if (formulario.ShowDialog(this) != DialogResult.OK || formulario.Resultado == null)
+                    return;
+
+                RefrescarConsultaActual(formulario.MensajeResultado);
             }
         }
 
@@ -574,8 +651,34 @@ namespace TiendaIndumentaria.App
         private void MostrarDatos(DataTable datos, string mensaje)
         {
             _grilla.DataSource = datos;
+            OcultarColumnasForaneas();
+            AplicarTitulosColumnas();
             _filaSeleccionada = null;
             _etiquetaEstado.Text = mensaje;
+        }
+
+        private void OcultarColumnasForaneas()
+        {
+            OpcionConsulta? opcion = ObtenerOpcionActual();
+            if (opcion == null)
+                return;
+
+            foreach (DataGridViewColumn columna in _grilla.Columns)
+            {
+                bool esId = columna.Name.StartsWith("Id", StringComparison.OrdinalIgnoreCase);
+                bool esIdPrincipal = columna.Name.Equals(opcion.ColumnaId, StringComparison.OrdinalIgnoreCase);
+                if (esId && !esIdPrincipal)
+                    columna.Visible = false;
+            }
+        }
+
+        private void AplicarTitulosColumnas()
+        {
+            foreach (DataGridViewColumn columna in _grilla.Columns)
+            {
+                if (TitulosColumnas.TryGetValue(columna.Name, out string? titulo))
+                    columna.HeaderText = titulo;
+            }
         }
 
         private void RefrescarConsultaActual(string mensaje)

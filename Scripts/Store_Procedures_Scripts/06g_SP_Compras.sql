@@ -239,6 +239,10 @@ BEGIN
         Total = @Total
     WHERE IdCompra = @IdCompra;
 
+    SELECT IdCompra, IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total
+    FROM Compras
+    WHERE IdCompra = @IdCompra;
+
     PRINT 'Compra actualizada';
 END;
 GO
