@@ -19,15 +19,6 @@ EXEC dbo.SP_Proveedor_Registrar
     @Direccion = 'Av. Santa Fe 4567, CABA';
 GO
 
--- Probar: dbo.SP_Proveedor_ActualizarContacto
--- Caso: actualizar contacto
-EXEC dbo.SP_Proveedor_ActualizarContacto
-    @IdProveedor = 3,
-    @Email = 'proveedores@modaNuevax.com',
-    @Telefono = '1144556677',
-    @Direccion = 'Av. Cabildo 1234, CABA';
-GO
-
 -- Probar: dbo.SP_Proveedor_Actualizar
 -- Caso: modificar los datos
 EXEC dbo.SP_Proveedor_Actualizar

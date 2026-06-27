@@ -327,11 +327,14 @@ namespace TiendaIndumentaria.App
             EjecutarRegistro(() =>
             {
                 Resultado = Conexion.EjecutarProcedimiento(
-                    "dbo.SP_Proveedor_ActualizarContacto",
+                    "dbo.SP_Proveedor_Actualizar",
                     ("@IdProveedor", _idRegistro.Value),
+                    ("@RazonSocial", ValorCampo("RazonSocial")),
+                    ("@CUIT", ValorCampo("CUIT")),
                     ("@Email", ValorOpcional("Email")),
                     ("@Telefono", ValorOpcional("Telefono")),
-                    ("@Direccion", ValorOpcional("Direccion")));
+                    ("@Direccion", ValorOpcional("Direccion")),
+                    ("@Activo", _activoInicial));
 
                 MensajeResultado = "Proveedor actualizado correctamente.";
             });
@@ -847,8 +850,8 @@ namespace TiendaIndumentaria.App
                 case TipoRegistro.Proveedor:
                     return new[]
                     {
-                        ("RazonSocial", "Razon social", _modoEdicion),
-                        ("CUIT", "CUIT", _modoEdicion),
+                        ("RazonSocial", "Razon social", false),
+                        ("CUIT", "CUIT", false),
                         ("Email", "Email", false),
                         ("Telefono", "Telefono", false),
                         ("Direccion", "Direccion", false)
