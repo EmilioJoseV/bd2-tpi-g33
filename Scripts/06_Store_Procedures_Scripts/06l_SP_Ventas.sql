@@ -1,4 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Ventas
+
+------------------------------------------------------------------------------------------------
 -- SP_Venta_Consultar: filtra ventas por fecha y por los datos que se quieran pasar.
 
 IF OBJECT_ID(N'dbo.SP_Venta_Consultar', N'P') IS NOT NULL

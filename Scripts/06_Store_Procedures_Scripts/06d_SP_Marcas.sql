@@ -1,5 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Marcas
 
+------------------------------------------------------------------------------------------------
 -- SP_Marca_Registrar
 IF OBJECT_ID(N'dbo.SP_Marca_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Marca_Registrar;
@@ -39,7 +41,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Marca_Actualizar
 IF OBJECT_ID(N'dbo.SP_Marca_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Marca_Actualizar;
@@ -87,7 +89,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Marca_Desactivar
 IF OBJECT_ID(N'dbo.SP_Marca_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Marca_Desactivar;
@@ -112,7 +114,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Marca_Reactivar
 IF OBJECT_ID(N'dbo.SP_Marca_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Marca_Reactivar;

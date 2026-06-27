@@ -1,5 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Colores
 
+------------------------------------------------------------------------------------------------
 -- SP_Color_Registrar
 IF OBJECT_ID(N'dbo.SP_Color_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Color_Registrar;
@@ -34,7 +36,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Color_Actualizar
 IF OBJECT_ID(N'dbo.SP_Color_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Color_Actualizar;
@@ -80,7 +82,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Color_Desactivar
 IF OBJECT_ID(N'dbo.SP_Color_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Color_Desactivar;
@@ -105,7 +107,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Color_Reactivar
 IF OBJECT_ID(N'dbo.SP_Color_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Color_Reactivar;

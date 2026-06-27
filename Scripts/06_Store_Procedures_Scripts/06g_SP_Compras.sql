@@ -1,5 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Compras
 
+------------------------------------------------------------------------------------------------
 -- SP_Compra_Registrar: registra una compra validando bien los datos de entrada.
 IF OBJECT_ID(N'dbo.SP_Compra_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Compra_Registrar;
@@ -101,6 +103,7 @@ BEGIN
 END;
 GO
 
+------------------------------------------------------------------------------------------------
 -- SP_Compra_Actualizar: actualiza los datos principales de una compra existente.
 IF OBJECT_ID(N'dbo.SP_Compra_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Compra_Actualizar;
@@ -244,6 +247,7 @@ BEGIN
 END;
 GO
 
+------------------------------------------------------------------------------------------------
 -- SP_Compra_Consultar: filtra compras por proveedor y por fecha.
 
 IF OBJECT_ID(N'dbo.SP_Compra_Consultar', N'P') IS NOT NULL

@@ -2,7 +2,6 @@ USE BD2_TPI_TIENDA_INDUMENTARIA;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #13 - Disminuir automáticamente el stock cuando se registra una venta a un cliente
 -- TRG_Venta_ActualizarStockPorEstado: toca el stock si la venta pasa a confirmada o deja de estarlo.
 
 IF OBJECT_ID(N'dbo.TRG_Venta_ActualizarStockPorEstado', N'TR') IS NOT NULL
@@ -96,6 +95,7 @@ BEGIN
 END;
 GO
 
+------------------------------------------------------------------------------------------------
 -- TRG_Compra_ActualizarStockPorEstado: toca el stock si la compra pasa a confirmada o deja de estarlo.
 
 IF OBJECT_ID(N'dbo.TRG_Compra_ActualizarStockPorEstado', N'TR') IS NOT NULL

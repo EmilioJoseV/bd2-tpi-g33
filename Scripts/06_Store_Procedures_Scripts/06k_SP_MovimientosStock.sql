@@ -1,3 +1,4 @@
+------------------------------------------------------------------------------------------------
 IF OBJECT_ID(N'dbo.SP_MovimientoStock_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_MovimientoStock_Registrar;
 GO
@@ -55,7 +56,6 @@ BEGIN
         RAISERROR('El producto no está activo', 16, 1);
         RETURN;
     END
-
 
     IF NOT EXISTS (
         SELECT 1 FROM TiposMovimientoStock WHERE IdTipoMovimientoStock = @IdTipoMovimientoStock
@@ -203,7 +203,6 @@ GO
 IF OBJECT_ID(N'dbo.TRG_Venta_RegistrarMovimientoStock', N'TR') IS NOT NULL
     DROP TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock;
 GO
-
 
 CREATE TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock
 ON Ventas

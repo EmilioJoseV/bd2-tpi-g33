@@ -1,5 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Proveedores
 
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Registrar (Procedimiento para registrar un nuevo proveedor y mantener sus datos de contacto)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Registrar;
@@ -67,7 +69,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Actualizar (Actualiza los datos principales de un proveedor existente.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Actualizar;
@@ -143,7 +145,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_ActualizarContacto (Mantener sus datos de contacto: solo Email, Telefono y Direccion.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_ActualizarContacto', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_ActualizarContacto;
@@ -189,7 +191,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Desactivar (Baja logica.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Desactivar;
@@ -217,7 +219,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Proveedor_Reactivar (Reactivacion de un proveedor desactivado.)
 IF OBJECT_ID(N'dbo.SP_Proveedor_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Proveedor_Reactivar;

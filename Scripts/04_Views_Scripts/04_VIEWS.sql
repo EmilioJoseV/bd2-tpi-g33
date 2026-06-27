@@ -2,7 +2,6 @@ USE BD2_TPI_TIENDA_INDUMENTARIA;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #14 - Consultar el historial de movimientos de stock de cada producto
 -- VW_Producto_ConsultarHistorialStock: Mostrar los movimientos de stock del producto.
 
 IF OBJECT_ID(N'dbo.VW_Producto_ConsultarHistorialStock', N'V') IS NOT NULL
@@ -34,7 +33,6 @@ LEFT JOIN Compras c ON c.IdCompra = ms.IdCompra;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #15 - Detectar productos cuyo stock se encuentra por debajo del minimo definido
 -- VW_Producto_ConsultarStockBajoMinimo: muestra los productos que ya estan por debajo del minimo
 
 IF OBJECT_ID(N'dbo.VW_Producto_ConsultarStockBajoMinimo', N'V') IS NOT NULL
@@ -56,7 +54,6 @@ WHERE p.Activo = 1 --Siempre fijarnos en los productos activos
 GO
 
 ------------------------------------------------------------------------------------------------
--- #18 - Obtener reportes de productos mas vendidos
 -- VW_Producto_ConsultarMasVendido: muestra cuales productos tuvieron mas salida.
 
 IF OBJECT_ID(N'dbo.VW_Producto_ConsultarMasVendido', N'V') IS NOT NULL
@@ -80,7 +77,6 @@ GROUP BY
 GO
 
 ------------------------------------------------------------------------------------------------
--- #19 - Obtener reportes de ventas mensuales
 -- VW_Venta_ConsultarMensual: resume cuantas ventas hubo por año-mes y cuanto se facturo.
 
 IF OBJECT_ID(N'dbo.VW_Venta_ConsultarMensual', N'V') IS NOT NULL
@@ -101,9 +97,7 @@ GROUP BY
 GO
 
 ------------------------------------------------------------------------------------------------
--- #20 - Controlar el stock actual de cada producto
 -- VW_Producto_ConsultarStockActual: muestra el stock actual de todos los productos y si ya esta por debajo del minimo
-
 IF OBJECT_ID(N'dbo.VW_Producto_ConsultarStockActual', N'V') IS NOT NULL
     DROP VIEW dbo.VW_Producto_ConsultarStockActual;
 GO
@@ -125,10 +119,7 @@ FROM Productos p
 WHERE p.Activo = 1;
 GO
 
-------------------------------------------------------------------------------------------------
--- #21 - Calcular el valor total del inventario disponible
 -- VW_Inventario_ConsultarValorTotal: suma el valor de todo el stock activo.
-
 IF OBJECT_ID(N'dbo.VW_Inventario_ConsultarValorTotal', N'V') IS NOT NULL
     DROP VIEW dbo.VW_Inventario_ConsultarValorTotal;
 GO
