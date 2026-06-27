@@ -133,7 +133,7 @@ namespace TiendaIndumentaria.App
             try
             {
                 Resultado = Conexion.EjecutarProcedimiento(
-                    "dbo.sp_actualizarVenta",
+                    "dbo.SP_Venta_Actualizar",
                     ("@IdVenta", _idVenta),
                     ("@IdCliente", _idCliente),
                     ("@IdEmpleado", _idEmpleado),

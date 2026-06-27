@@ -165,7 +165,7 @@ namespace TiendaIndumentaria.App
                 DataTable venta = EjecutarSpTablaEnTransaccion(
                     conexion,
                     transaccion,
-                    "sp_registrarVenta",
+                    "SP_Venta_Registrar",
                     ("@IdCliente", idCliente),
                     ("@IdEmpleado", idEmpleado),
                     ("@IdMedioPago", idMedioPago));
