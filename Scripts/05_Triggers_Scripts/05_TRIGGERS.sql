@@ -136,7 +136,7 @@ BEGIN
         NULL,
         SYSDATETIME(),
         dc.Cantidad,
-        CONCAT('Ingreso automÃ¡tico por confirmaciÃ³n de compra #', i.IdCompra)
+        CONCAT('Ingreso automatico por confirmacion de compra #', i.IdCompra)
     FROM inserted i
     INNER JOIN deleted d           ON d.IdCompra        = i.IdCompra
     INNER JOIN EstadosCompra ecAnt ON ecAnt.IdEstadoCompra = d.IdEstadoCompra
@@ -188,8 +188,8 @@ BEGIN
         NULL,
         i.IdVenta,
         SYSDATETIME(),
-        dv.Cantidad * -1,   -- negativo: es una salida
-        CONCAT('Egreso automÃ¡tico por confirmaciÃ³n de venta #', i.IdVenta)
+        dv.Cantidad,
+        CONCAT('Egreso automatico por confirmacion de venta #', i.IdVenta)
     FROM inserted i
     INNER JOIN deleted d           ON d.IdVenta          = i.IdVenta
     INNER JOIN EstadosVenta evAnt  ON evAnt.IdEstadoVenta  = d.IdEstadoVenta
