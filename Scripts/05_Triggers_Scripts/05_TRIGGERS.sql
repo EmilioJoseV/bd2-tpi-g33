@@ -188,3 +188,109 @@ BEGIN
     ) m ON m.IdProducto = p.IdProducto;
 END;
 GO
+
+------------------------------------------------------------------------------------------------
+-- TRG_Compra_RegistrarMovimientoStock: registra un movimiento de stock cuando una compra pasa a confirmada.
+
+IF OBJECT_ID(N'dbo.TRG_Compra_RegistrarMovimientoStock', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.TRG_Compra_RegistrarMovimientoStock;
+GO
+
+CREATE TRIGGER dbo.TRG_Compra_RegistrarMovimientoStock
+ON Compras
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @IdTipoIngreso INT;
+
+    SELECT @IdTipoIngreso = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE UPPER(Nombre) = 'INGRESO POR COMPRA';
+
+    IF @IdTipoIngreso IS NULL
+        RETURN;
+
+    INSERT INTO MovimientosStock (
+        IdProducto,
+        IdTipoMovimientoStock,
+        IdEmpleado,
+        IdCompra,
+        IdVenta,
+        FechaMovimiento,
+        Cantidad,
+        Motivo
+    )
+    SELECT
+        dc.IdProducto,
+        @IdTipoIngreso,
+        i.IdEmpleado,
+        i.IdCompra,
+        NULL,
+        SYSDATETIME(),
+        dc.Cantidad,
+        CONCAT('Ingreso automático por confirmación de compra #', i.IdCompra)
+    FROM inserted i
+    INNER JOIN deleted d           ON d.IdCompra        = i.IdCompra
+    INNER JOIN EstadosCompra ecAnt ON ecAnt.IdEstadoCompra = d.IdEstadoCompra
+    INNER JOIN EstadosCompra ecNvo ON ecNvo.IdEstadoCompra = i.IdEstadoCompra
+    INNER JOIN DetalleCompras dc   ON dc.IdCompra        = i.IdCompra
+    WHERE i.IdEstadoCompra <> d.IdEstadoCompra
+      AND UPPER(ecAnt.Nombre) <> 'CONFIRMADA'
+      AND UPPER(ecNvo.Nombre)  = 'CONFIRMADA';
+END;
+GO
+
+------------------------------------------------------------------------------------------------
+-- TRG_Venta_RegistrarMovimientoStock: registra un movimiento de stock cuando una venta pasa a confirmada.
+
+IF OBJECT_ID(N'dbo.TRG_Venta_RegistrarMovimientoStock', N'TR') IS NOT NULL
+    DROP TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock;
+GO
+
+CREATE TRIGGER dbo.TRG_Venta_RegistrarMovimientoStock
+ON Ventas
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @IdTipoEgreso INT;
+
+    SELECT @IdTipoEgreso = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE UPPER(Nombre) = 'EGRESO POR VENTA';
+
+    IF @IdTipoEgreso IS NULL
+        RETURN;
+
+    INSERT INTO MovimientosStock (
+        IdProducto,
+        IdTipoMovimientoStock,
+        IdEmpleado,
+        IdCompra,
+        IdVenta,
+        FechaMovimiento,
+        Cantidad,
+        Motivo
+    )
+    SELECT
+        dv.IdProducto,
+        @IdTipoEgreso,
+        i.IdEmpleado,
+        NULL,
+        i.IdVenta,
+        SYSDATETIME(),
+        dv.Cantidad * -1,   -- negativo: es una salida
+        CONCAT('Egreso automático por confirmación de venta #', i.IdVenta)
+    FROM inserted i
+    INNER JOIN deleted d           ON d.IdVenta          = i.IdVenta
+    INNER JOIN EstadosVenta evAnt  ON evAnt.IdEstadoVenta  = d.IdEstadoVenta
+    INNER JOIN EstadosVenta evNvo  ON evNvo.IdEstadoVenta  = i.IdEstadoVenta
+    INNER JOIN DetalleVentas dv    ON dv.IdVenta           = i.IdVenta
+    WHERE i.IdEstadoVenta <> d.IdEstadoVenta
+      AND UPPER(evAnt.Nombre) <> 'CONFIRMADA'
+      AND UPPER(evNvo.Nombre)  = 'CONFIRMADA';
+END;
+GO
