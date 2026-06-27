@@ -1,7 +1,13 @@
+------------------------------------------------------------------------------------------------
 -- Detalle de compras
 
--- sp_registrarDetalleCompra: agrega un registro de detalle a una compra.
-CREATE PROCEDURE sp_registrarDetalleCompra
+------------------------------------------------------------------------------------------------
+-- SP_DetalleCompra_Registrar: agrega un registro de detalle a una compra.
+IF OBJECT_ID(N'dbo.SP_DetalleCompra_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleCompra_Registrar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleCompra_Registrar
     @IdCompra INT,
     @IdProducto INT,
     @Cantidad INT,
@@ -86,8 +92,13 @@ BEGIN
 END;
 GO
 
--- sp_actualizarDetalleCompra: actualiza una linea de detalle de compra.
-CREATE PROCEDURE sp_actualizarDetalleCompra
+------------------------------------------------------------------------------------------------
+-- SP_DetalleCompra_Actualizar: actualiza una linea de detalle de compra.
+IF OBJECT_ID(N'dbo.SP_DetalleCompra_Actualizar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleCompra_Actualizar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleCompra_Actualizar
     @IdDetalleCompra INT,
     @IdProducto INT,
     @Cantidad INT,
@@ -182,8 +193,13 @@ BEGIN
 END;
 GO
 
--- sp_eliminarDetalleCompra: elimina una linea de detalle de compra.
-CREATE PROCEDURE sp_eliminarDetalleCompra
+------------------------------------------------------------------------------------------------
+-- SP_DetalleCompra_Eliminar: elimina una linea de detalle de compra.
+IF OBJECT_ID(N'dbo.SP_DetalleCompra_Eliminar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_DetalleCompra_Eliminar;
+GO
+
+CREATE PROCEDURE dbo.SP_DetalleCompra_Eliminar
     @IdDetalleCompra INT
 AS
 BEGIN

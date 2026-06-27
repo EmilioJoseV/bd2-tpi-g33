@@ -1,7 +1,13 @@
+------------------------------------------------------------------------------------------------
 -- Compras
 
--- sp_registrarCompra: registra una compra validando bien los datos de entrada.
-CREATE PROCEDURE sp_registrarCompra
+------------------------------------------------------------------------------------------------
+-- SP_Compra_Registrar: registra una compra validando bien los datos de entrada.
+IF OBJECT_ID(N'dbo.SP_Compra_Registrar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Compra_Registrar;
+GO
+
+CREATE PROCEDURE dbo.SP_Compra_Registrar
     @IdProveedor INT,
     @IdEmpleado INT,
     @NumeroComprobante VARCHAR(50),
@@ -104,8 +110,13 @@ BEGIN
 END;
 GO
 
--- sp_actualizarCompra: actualiza los datos principales de una compra existente.
-CREATE PROCEDURE sp_actualizarCompra
+------------------------------------------------------------------------------------------------
+-- SP_Compra_Actualizar: actualiza los datos principales de una compra existente.
+IF OBJECT_ID(N'dbo.SP_Compra_Actualizar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Compra_Actualizar;
+GO
+
+CREATE PROCEDURE dbo.SP_Compra_Actualizar
     @IdCompra INT,
     @IdProveedor INT,
     @IdEmpleado INT,
@@ -244,5 +255,49 @@ BEGIN
     WHERE IdCompra = @IdCompra;
 
     PRINT 'Compra actualizada';
+END;
+GO
+
+------------------------------------------------------------------------------------------------
+-- SP_Compra_Consultar: filtra compras por proveedor y por fecha.
+
+IF OBJECT_ID(N'dbo.SP_Compra_Consultar', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Compra_Consultar;
+GO
+
+CREATE PROCEDURE dbo.SP_Compra_Consultar
+    @FechaDesde DATE = NULL,
+    @FechaHasta DATE = NULL,
+    @IdProveedor INT = NULL
+AS
+BEGIN
+    IF @FechaDesde IS NOT NULL AND @FechaHasta IS NOT NULL AND @FechaDesde > @FechaHasta
+    BEGIN
+        PRINT 'Las fechas no cierran';
+        RETURN;
+    END
+
+    IF @IdProveedor IS NOT NULL AND @IdProveedor <= 0
+    BEGIN
+        PRINT 'El id de proveedor es invalido';
+        RETURN;
+    END
+
+    SELECT
+        c.IdCompra,
+        c.FechaCompra,
+        c.NumeroComprobante,
+        c.Total,
+        p.RazonSocial AS Proveedor,
+        e.Apellido + ', ' + e.Nombre AS Empleado,
+        ec.Nombre AS EstadoCompra
+    FROM Compras c
+    INNER JOIN Proveedores p ON p.IdProveedor = c.IdProveedor
+    INNER JOIN Empleados e ON e.IdEmpleado = c.IdEmpleado
+    INNER JOIN EstadosCompra ec ON ec.IdEstadoCompra = c.IdEstadoCompra
+    WHERE (@FechaDesde IS NULL OR CAST(c.FechaCompra AS date) >= @FechaDesde)
+      AND (@FechaHasta IS NULL OR CAST(c.FechaCompra AS date) <= @FechaHasta)
+      AND (@IdProveedor IS NULL OR c.IdProveedor = @IdProveedor)
+    ORDER BY c.FechaCompra, c.IdCompra;
 END;
 GO

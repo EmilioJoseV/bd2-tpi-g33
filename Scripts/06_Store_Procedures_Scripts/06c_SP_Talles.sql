@@ -1,5 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Talles
 
+------------------------------------------------------------------------------------------------
 -- SP_Talle_Registrar
 IF OBJECT_ID(N'dbo.SP_Talle_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Talle_Registrar;
@@ -39,7 +41,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Talle_Actualizar
 IF OBJECT_ID(N'dbo.SP_Talle_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Talle_Actualizar;
@@ -87,7 +89,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Talle_Desactivar
 IF OBJECT_ID(N'dbo.SP_Talle_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Talle_Desactivar;
@@ -112,7 +114,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Talle_Reactivar
 IF OBJECT_ID(N'dbo.SP_Talle_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Talle_Reactivar;
