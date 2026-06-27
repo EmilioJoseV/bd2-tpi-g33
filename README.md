@@ -60,7 +60,7 @@ proveedor.
 - Validar operaciones críticas, como evitar ventas sin stock suficiente.
 
 Notas:
-- Para ejecutar todos los scripts TSQL en SQL Server ejecutar el comando en Powershell: 'sqlcmd -S . -E -i "Scripts\00_EJECUTAR_TODO.sql"'
+- Para ejecutar todos los scripts TSQL en SQL Server ejecutar el comando en Powershell: 'sqlcmd -S . -E -i "Scripts\00_EJECUTAR_SCRIPTS.sql"'
 
 ## Integrantes
 
