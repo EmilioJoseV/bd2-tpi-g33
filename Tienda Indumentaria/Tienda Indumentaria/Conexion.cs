@@ -74,7 +74,7 @@ namespace TiendaIndumentaria.App
                     adaptador.Fill(tabla);
             }
 
-            ValidarMensajeSp(mensajesSp, mensajeExito);
+            ValidarResultadoSp(mensajesSp, mensajeExito, tabla.Rows.Count);
             return tabla;
         }
 
@@ -106,12 +106,13 @@ namespace TiendaIndumentaria.App
                     ("@NumeroComprobante", (object?)numeroComprobante ?? DBNull.Value),
                     ("@Total", total));
 
-                ValidarMensajeSp(mensajesSp, "Compra registrada");
-                mensajesSp.Clear();
-
                 if (compra.Rows.Count == 0)
+                {
+                    ValidarMensajeSp(mensajesSp, "Compra registrada");
                     throw new InvalidOperationException("No se pudo obtener la compra registrada.");
+                }
 
+                mensajesSp.Clear();
                 int idCompra = Convert.ToInt32(compra.Rows[0]["IdCompra"]);
 
                 foreach ((int idProducto, int cantidad, decimal precioUnitario) in detalles)
@@ -125,7 +126,7 @@ namespace TiendaIndumentaria.App
                         ("@Cantidad", cantidad),
                         ("@PrecioUnitario", precioUnitario));
 
-                    ValidarMensajeSp(mensajesSp, "Detalle de compra registrado");
+                    ValidarResultadoSpSinDatos(mensajesSp, "Detalle de compra registrado");
                     mensajesSp.Clear();
                 }
 
@@ -186,7 +187,7 @@ namespace TiendaIndumentaria.App
                         ("@IdProducto", idProducto),
                         ("@Cantidad", cantidad));
 
-                    ValidarMensajeSp(mensajesSp, "Detalle de venta registrado");
+                    ValidarResultadoSpSinDatos(mensajesSp, "Detalle de venta registrado");
                     mensajesSp.Clear();
                 }
 
@@ -280,6 +281,32 @@ namespace TiendaIndumentaria.App
             using var adaptador = new SqlDataAdapter(comando);
             adaptador.Fill(tabla);
             return tabla;
+        }
+
+        private static void ValidarResultadoSp(
+            IReadOnlyList<string> mensajes,
+            string mensajeExito,
+            int filasResultado)
+        {
+            if (filasResultado > 0)
+                return;
+
+            ValidarMensajeSp(mensajes, mensajeExito);
+        }
+
+        private static void ValidarResultadoSpSinDatos(IReadOnlyList<string> mensajes, string mensajeExito)
+        {
+            if (mensajes.Any(m => m.Contains(mensajeExito, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            if (mensajes.Count > 0)
+            {
+                string detalle = mensajes.LastOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? string.Empty;
+                throw new InvalidOperationException(
+                    string.IsNullOrWhiteSpace(detalle)
+                        ? "La operacion no se completo en la base de datos."
+                        : detalle);
+            }
         }
 
         private static void ValidarMensajeSp(IReadOnlyList<string> mensajes, string mensajeExito)
