@@ -393,6 +393,33 @@ GO
 SELECT 'Carga de los datos iniciales para pruebas OK...' AS Resultado;
 GO
 
+IF OBJECT_ID(N'dbo.vw_ProductosBajoStock', N'V') IS NOT NULL
+    DROP VIEW dbo.vw_ProductosBajoStock;
+GO
+
+CREATE VIEW dbo.vw_ProductosBajoStock
+AS
+SELECT
+    p.IdProducto,
+    p.CodigoProducto,
+    p.Nombre AS Producto,
+    c.Nombre AS Categoria,
+    m.Nombre AS Marca,
+    t.Nombre AS Talle,
+    co.Nombre AS Color,
+    p.StockActual,
+    p.StockMinimo,
+    p.StockMinimo - p.StockActual AS CantidadAReponer,
+    p.PrecioVenta
+FROM Productos p
+INNER JOIN Categorias c ON c.IdCategoria = p.IdCategoria
+INNER JOIN Marcas m ON m.IdMarca = p.IdMarca
+INNER JOIN Talles t ON t.IdTalle = p.IdTalle
+INNER JOIN Colores co ON co.IdColor = p.IdColor
+WHERE p.Activo = 1
+  AND p.StockActual <= p.StockMinimo;
+GO
+
 GO
 
 GO
@@ -409,6 +436,9 @@ ON Ventas
 AFTER UPDATE
 AS
 BEGIN
+    DECLARE @IdTipoEgresoVenta INT;
+    DECLARE @IdTipoReversionVenta INT;
+
     DECLARE @VentasQueSeConfirmaron TABLE (
         IdVenta INT
     );
@@ -421,6 +451,14 @@ BEGIN
         IdProducto INT,
         CantidadAAjustar INT
     );
+
+    SELECT @IdTipoEgresoVenta = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE Nombre = 'Egreso por venta';
+
+    SELECT @IdTipoReversionVenta = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE Nombre = 'Ajuste manual';
 
     -- Aca guardamos las ventas que antes no estaban confirmadas y ahora si.
     INSERT INTO @VentasQueSeConfirmaron (IdVenta)
@@ -460,6 +498,20 @@ BEGIN
     INNER JOIN @VentasQueSeDesconfirmaron vd ON vd.IdVenta = dv.IdVenta
     GROUP BY dv.IdProducto;
 
+    IF EXISTS (SELECT 1 FROM @VentasQueSeConfirmaron) AND @IdTipoEgresoVenta IS NULL
+    BEGIN
+        RAISERROR ('No existe el tipo de movimiento Egreso por venta', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    IF EXISTS (SELECT 1 FROM @VentasQueSeDesconfirmaron) AND @IdTipoReversionVenta IS NULL
+    BEGIN
+        RAISERROR ('No existe el tipo de movimiento Ajuste manual', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
     -- Antes de actualizar nada, revisamos si algun stock quedaria negativo.
     IF EXISTS (
         SELECT 1
@@ -488,6 +540,54 @@ BEGIN
         FROM @MovimientosStock
         GROUP BY IdProducto
     ) m ON m.IdProducto = p.IdProducto;
+
+    INSERT INTO MovimientosStock (
+        IdProducto,
+        IdTipoMovimientoStock,
+        IdEmpleado,
+        IdCompra,
+        IdVenta,
+        FechaMovimiento,
+        Cantidad,
+        Motivo
+    )
+    SELECT
+        dv.IdProducto,
+        @IdTipoEgresoVenta,
+        v.IdEmpleado,
+        NULL,
+        v.IdVenta,
+        SYSDATETIME(),
+        SUM(dv.Cantidad),
+        'Salida por venta VTA-' + CONVERT(varchar(20), v.IdVenta)
+    FROM DetalleVentas dv
+    INNER JOIN @VentasQueSeConfirmaron vc ON vc.IdVenta = dv.IdVenta
+    INNER JOIN Ventas v ON v.IdVenta = dv.IdVenta
+    GROUP BY dv.IdProducto, v.IdEmpleado, v.IdVenta;
+
+    INSERT INTO MovimientosStock (
+        IdProducto,
+        IdTipoMovimientoStock,
+        IdEmpleado,
+        IdCompra,
+        IdVenta,
+        FechaMovimiento,
+        Cantidad,
+        Motivo
+    )
+    SELECT
+        dv.IdProducto,
+        @IdTipoReversionVenta,
+        v.IdEmpleado,
+        NULL,
+        v.IdVenta,
+        SYSDATETIME(),
+        SUM(dv.Cantidad),
+        'Reversion de venta VTA-' + CONVERT(varchar(20), v.IdVenta)
+    FROM DetalleVentas dv
+    INNER JOIN @VentasQueSeDesconfirmaron vd ON vd.IdVenta = dv.IdVenta
+    INNER JOIN Ventas v ON v.IdVenta = dv.IdVenta
+    GROUP BY dv.IdProducto, v.IdEmpleado, v.IdVenta;
 END;
 GO
 
@@ -498,6 +598,9 @@ ON Compras
 AFTER UPDATE
 AS
 BEGIN
+    DECLARE @IdTipoIngresoCompra INT;
+    DECLARE @IdTipoReversionCompra INT;
+
     DECLARE @ComprasQueSeConfirmaron TABLE (
         IdCompra INT
     );
@@ -510,6 +613,14 @@ BEGIN
         IdProducto INT,
         CantidadAAjustar INT
     );
+
+    SELECT @IdTipoIngresoCompra = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE Nombre = 'Ingreso por compra';
+
+    SELECT @IdTipoReversionCompra = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE Nombre = 'Ajuste negativo';
 
     -- Aca guardamos las compras que antes no estaban confirmadas y ahora si.
     INSERT INTO @ComprasQueSeConfirmaron (IdCompra)
@@ -549,6 +660,20 @@ BEGIN
     INNER JOIN @ComprasQueSeDesconfirmaron cd ON cd.IdCompra = dc.IdCompra
     GROUP BY dc.IdProducto;
 
+    IF EXISTS (SELECT 1 FROM @ComprasQueSeConfirmaron) AND @IdTipoIngresoCompra IS NULL
+    BEGIN
+        RAISERROR ('No existe el tipo de movimiento Ingreso por compra', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    IF EXISTS (SELECT 1 FROM @ComprasQueSeDesconfirmaron) AND @IdTipoReversionCompra IS NULL
+    BEGIN
+        RAISERROR ('No existe el tipo de movimiento Ajuste negativo', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
     -- Antes de actualizar nada, revisamos si algun stock quedaria negativo
     IF EXISTS (
         SELECT 1
@@ -577,6 +702,54 @@ BEGIN
         FROM @MovimientosStock
         GROUP BY IdProducto
     ) m ON m.IdProducto = p.IdProducto;
+
+    INSERT INTO MovimientosStock (
+        IdProducto,
+        IdTipoMovimientoStock,
+        IdEmpleado,
+        IdCompra,
+        IdVenta,
+        FechaMovimiento,
+        Cantidad,
+        Motivo
+    )
+    SELECT
+        dc.IdProducto,
+        @IdTipoIngresoCompra,
+        c.IdEmpleado,
+        c.IdCompra,
+        NULL,
+        SYSDATETIME(),
+        SUM(dc.Cantidad),
+        'Ingreso por compra ' + COALESCE(NULLIF(c.NumeroComprobante, ''), 'COMP-' + CONVERT(varchar(20), c.IdCompra))
+    FROM DetalleCompras dc
+    INNER JOIN @ComprasQueSeConfirmaron cc ON cc.IdCompra = dc.IdCompra
+    INNER JOIN Compras c ON c.IdCompra = dc.IdCompra
+    GROUP BY dc.IdProducto, c.IdEmpleado, c.IdCompra, c.NumeroComprobante;
+
+    INSERT INTO MovimientosStock (
+        IdProducto,
+        IdTipoMovimientoStock,
+        IdEmpleado,
+        IdCompra,
+        IdVenta,
+        FechaMovimiento,
+        Cantidad,
+        Motivo
+    )
+    SELECT
+        dc.IdProducto,
+        @IdTipoReversionCompra,
+        c.IdEmpleado,
+        c.IdCompra,
+        NULL,
+        SYSDATETIME(),
+        SUM(dc.Cantidad),
+        'Reversion de compra ' + COALESCE(NULLIF(c.NumeroComprobante, ''), 'COMP-' + CONVERT(varchar(20), c.IdCompra))
+    FROM DetalleCompras dc
+    INNER JOIN @ComprasQueSeDesconfirmaron cd ON cd.IdCompra = dc.IdCompra
+    INNER JOIN Compras c ON c.IdCompra = dc.IdCompra
+    GROUP BY dc.IdProducto, c.IdEmpleado, c.IdCompra, c.NumeroComprobante;
 END;
 GO
 

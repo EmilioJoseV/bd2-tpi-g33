@@ -29,6 +29,9 @@ namespace TiendaIndumentaria.App
             ["MedioPago"] = "Medio pago",
             ["FechaVenta"] = "Fecha",
             ["FechaCompra"] = "Fecha",
+            ["FechaMovimiento"] = "Fecha",
+            ["TipoMovimiento"] = "Tipo movimiento",
+            ["CantidadAReponer"] = "Cantidad a reponer",
             ["NumeroComprobante"] = "Comprobante"
         };
 
@@ -175,14 +178,18 @@ namespace TiendaIndumentaria.App
             productos.DropDownItems.Add(CrearItemMenu("Ajustar stock", AbrirFormularioAjusteStock));
             productos.DropDownItems.Add(new ToolStripSeparator());
             productos.DropDownItems.Add(CrearItemMenu("Ver productos", () => SeleccionarApartado("Productos")));
+            productos.DropDownItems.Add(CrearItemMenu("Productos bajo stock", () => SeleccionarApartado("ProductosBajoStock")));
+            productos.DropDownItems.Add(CrearItemMenu("Ver movimientos de stock", () => SeleccionarApartado("MovimientosStock")));
 
             var consultas = new ToolStripMenuItem("Consultas");
             consultas.DropDownItems.Add(CrearItemMenu("Proveedores", () => SeleccionarApartado("Proveedores")));
             consultas.DropDownItems.Add(CrearItemMenu("Clientes", () => SeleccionarApartado("Clientes")));
             consultas.DropDownItems.Add(CrearItemMenu("Empleados", () => SeleccionarApartado("Empleados")));
             consultas.DropDownItems.Add(CrearItemMenu("Productos", () => SeleccionarApartado("Productos")));
+            consultas.DropDownItems.Add(CrearItemMenu("Productos bajo stock", () => SeleccionarApartado("ProductosBajoStock")));
             consultas.DropDownItems.Add(CrearItemMenu("Ventas", () => SeleccionarApartado("Ventas")));
             consultas.DropDownItems.Add(CrearItemMenu("Compras", () => SeleccionarApartado("Compras")));
+            consultas.DropDownItems.Add(CrearItemMenu("Movimientos de stock", () => SeleccionarApartado("MovimientosStock")));
 
             var configuracion = new ToolStripMenuItem("Configuracion");
             configuracion.DropDownItems.Add(CrearItemMenu("Nueva categoria", () => AbrirFormularioRegistro(TipoRegistro.Categoria)));
@@ -265,6 +272,16 @@ namespace TiendaIndumentaria.App
                 TipoRegistro.Producto));
 
             _comboConsultas.Items.Add(new OpcionConsulta(
+                "Productos bajo stock",
+                "SELECT IdProducto, CodigoProducto, Producto, Categoria, Marca, Talle, Color, " +
+                "StockActual, StockMinimo, CantidadAReponer, PrecioVenta " +
+                "FROM dbo.vw_ProductosBajoStock " +
+                "ORDER BY CantidadAReponer DESC, Producto",
+                "ProductosBajoStock",
+                "IdProducto",
+                null));
+
+            _comboConsultas.Items.Add(new OpcionConsulta(
                 "Categorias",
                 "SELECT IdCategoria, Nombre, Descripcion, Activo FROM Categorias ORDER BY Nombre",
                 "Categorias",
@@ -323,6 +340,23 @@ namespace TiendaIndumentaria.App
                 "IdCompra",
                 TipoRegistro.Compra));
 
+            _comboConsultas.Items.Add(new OpcionConsulta(
+                "Movimientos de stock",
+                "SELECT ms.IdMovimientoStock, p.CodigoProducto AS Codigo, p.Nombre AS Producto, " +
+                "tms.Nombre AS TipoMovimiento, " +
+                "COALESCE(e.Apellido + ', ' + e.Nombre, '-') AS Empleado, " +
+                "COALESCE(CONVERT(varchar(20), ms.IdCompra), '-') AS Compra, " +
+                "COALESCE(CONVERT(varchar(20), ms.IdVenta), '-') AS Venta, " +
+                "ms.FechaMovimiento, ms.Cantidad, ms.Motivo " +
+                "FROM MovimientosStock ms " +
+                "INNER JOIN Productos p ON p.IdProducto = ms.IdProducto " +
+                "INNER JOIN TiposMovimientoStock tms ON tms.IdTipoMovimientoStock = ms.IdTipoMovimientoStock " +
+                "LEFT JOIN Empleados e ON e.IdEmpleado = ms.IdEmpleado " +
+                "ORDER BY ms.FechaMovimiento DESC, ms.IdMovimientoStock DESC",
+                "MovimientosStock",
+                "IdMovimientoStock",
+                null));
+
             if (_comboConsultas.Items.Count > 0)
                 _comboConsultas.SelectedIndex = 0;
         }
@@ -374,6 +408,10 @@ namespace TiendaIndumentaria.App
             _menuCambiarEstado.Text = esOperacion
                 ? "Cambiar estado"
                 : estaActivo ? "Inactivar" : "Activar";
+
+            if (!permiteEditar && !permiteCambiarEstado)
+                return;
+
             _menuRegistro.Show(_grilla, _grilla.PointToClient(Cursor.Position));
         }
 
