@@ -10,8 +10,6 @@ ORDER BY FechaMovimiento, TipoMovimiento;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #15 - Detectar productos cuyo stock se encuentra por debajo del minimo definido
-
 -- Probar: dbo.VW_Producto_ConsultarStockBajoMinimo
 -- Caso: consultar productos bajo minimo
 SELECT *
@@ -20,8 +18,6 @@ ORDER BY IdProducto;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #18 - Obtener reportes de productos mas vendidos
-
 -- Probar: dbo.VW_Producto_ConsultarMasVendido
 -- Caso: consultar mas vendidos
 SELECT *
@@ -30,8 +26,6 @@ ORDER BY CantidadVendida DESC, TotalFacturado DESC, NombreProducto;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #19 - Obtener reportes de ventas mensuales
-
 -- Probar: dbo.VW_Venta_ConsultarMensual
 -- Caso: consultar ventas mensuales
 SELECT *
@@ -40,8 +34,6 @@ ORDER BY Anio, Mes;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #20 - Controlar el stock actual de cada producto
-
 -- Probar: dbo.VW_Producto_ConsultarStockActual
 -- Caso: consultar stock actual
 SELECT *
@@ -50,8 +42,6 @@ ORDER BY StockActual, Nombre;
 GO
 
 ------------------------------------------------------------------------------------------------
--- #21 - Calcular el valor total del inventario disponible
-
 -- Probar: dbo.VW_Inventario_ConsultarValorTotal
 -- Caso: consultar valor total del inventario
 SELECT *

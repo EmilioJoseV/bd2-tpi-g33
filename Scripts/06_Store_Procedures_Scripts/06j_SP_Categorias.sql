@@ -1,5 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Categorias
 
+------------------------------------------------------------------------------------------------
 -- SP_Categoria_Registrar
 IF OBJECT_ID(N'dbo.SP_Categoria_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Categoria_Registrar;
@@ -39,7 +41,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Categoria_Actualizar
 IF OBJECT_ID(N'dbo.SP_Categoria_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Categoria_Actualizar;
@@ -87,7 +89,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Categoria_Desactivar
 IF OBJECT_ID(N'dbo.SP_Categoria_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Categoria_Desactivar;
@@ -112,7 +114,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Categoria_Reactivar
 IF OBJECT_ID(N'dbo.SP_Categoria_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Categoria_Reactivar;

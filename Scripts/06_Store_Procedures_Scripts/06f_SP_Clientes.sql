@@ -1,5 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Clientes
 
+------------------------------------------------------------------------------------------------
 -- SP_Cliente_Registrar: da de alta un cliente y valida que el documento no se repita.
 IF OBJECT_ID(N'dbo.SP_Cliente_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Cliente_Registrar;
@@ -61,6 +63,7 @@ BEGIN
 END;
 GO
 
+------------------------------------------------------------------------------------------------
 -- SP_Cliente_Actualizar: actualiza los datos principales de un cliente existente.
 IF OBJECT_ID(N'dbo.SP_Cliente_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Cliente_Actualizar;

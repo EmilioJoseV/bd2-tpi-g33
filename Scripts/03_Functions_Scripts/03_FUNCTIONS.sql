@@ -1,6 +1,7 @@
 USE BD2_TPI_TIENDA_INDUMENTARIA;
 GO
 
+------------------------------------------------------------------------------------------------
 -- FN_Venta_CalcularTotal: devuelve el total actual de una venta segun sus detalles
 IF OBJECT_ID(N'dbo.FN_Venta_CalcularTotal', N'FN') IS NOT NULL
     DROP FUNCTION dbo.FN_Venta_CalcularTotal;

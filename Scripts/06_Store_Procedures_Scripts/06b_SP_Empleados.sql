@@ -1,5 +1,7 @@
+------------------------------------------------------------------------------------------------
 -- Empleados
 
+------------------------------------------------------------------------------------------------
 -- SP_Empleado_Registrar
 IF OBJECT_ID(N'dbo.SP_Empleado_Registrar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Empleado_Registrar;
@@ -51,7 +53,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Empleado_Actualizar
 IF OBJECT_ID(N'dbo.SP_Empleado_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Empleado_Actualizar;
@@ -111,7 +113,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Empleado_Desactivar
 IF OBJECT_ID(N'dbo.SP_Empleado_Desactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Empleado_Desactivar;
@@ -136,7 +138,7 @@ BEGIN
 END;
 GO
 
-
+------------------------------------------------------------------------------------------------
 -- SP_Empleado_Reactivar
 IF OBJECT_ID(N'dbo.SP_Empleado_Reactivar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Empleado_Reactivar;
