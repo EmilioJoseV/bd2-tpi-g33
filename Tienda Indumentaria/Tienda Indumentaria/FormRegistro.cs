@@ -782,18 +782,6 @@ namespace TiendaIndumentaria.App
         {
             switch (_tipoRegistro)
             {
-                case TipoRegistro.Compra:
-                    return new[]
-                    {
-                        ("IdProveedor", "Id proveedor", false),
-                        ("IdEmpleado", "Id empleado", false),
-                        ("Comprobante", "Comprobante", false),
-                        ("IdProducto", "Id producto", false),
-                        ("Cantidad", "Cantidad", false),
-                        ("PrecioUnitario", "Precio unitario", false),
-                        ("Total", "Total", true)
-                    };
-
                 case TipoRegistro.Venta:
                     return new[]
                     {
@@ -909,7 +897,7 @@ namespace TiendaIndumentaria.App
 
         private bool EsOperacion()
         {
-            return _tipoRegistro == TipoRegistro.Compra || _tipoRegistro == TipoRegistro.Venta;
+            return _tipoRegistro == TipoRegistro.Venta;
         }
 
         private bool EsProducto()

@@ -146,7 +146,7 @@ namespace TiendaIndumentaria.App
 
             var operaciones = new ToolStripMenuItem("Operaciones");
             operaciones.DropDownItems.Add(CrearItemMenu("Nueva venta", () => AbrirFormularioRegistro(TipoRegistro.Venta)));
-            operaciones.DropDownItems.Add(CrearItemMenu("Nueva compra", () => AbrirFormularioRegistro(TipoRegistro.Compra)));
+            operaciones.DropDownItems.Add(CrearItemMenu("Nueva compra", AbrirFormularioCompra));
 
             var registros = new ToolStripMenuItem("Registros");
             registros.DropDownItems.Add(CrearItemMenu("Nuevo proveedor", () => AbrirFormularioRegistro(TipoRegistro.Proveedor)));
@@ -440,6 +440,24 @@ namespace TiendaIndumentaria.App
                     return;
 
                 SeleccionarApartado("Productos");
+                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+            }
+        }
+
+        private void AbrirFormularioCompra()
+        {
+            using (var formulario = new FormCompra())
+            {
+                if (formulario.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                if (formulario.Resultado == null)
+                {
+                    _etiquetaEstado.Text = formulario.MensajeResultado;
+                    return;
+                }
+
+                SeleccionarApartado("Compras");
                 MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
             }
         }

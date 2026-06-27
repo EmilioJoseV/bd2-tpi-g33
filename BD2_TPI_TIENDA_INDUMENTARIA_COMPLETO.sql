@@ -2548,6 +2548,134 @@ END;
 GO
 
 
+-- SP_Producto_AjustarStock
+IF OBJECT_ID(N'dbo.SP_Producto_AjustarStock', N'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_Producto_AjustarStock;
+GO
+
+CREATE PROCEDURE dbo.SP_Producto_AjustarStock
+    @IdProducto int,
+    @Operacion varchar(10),
+    @Cantidad int,
+    @IdEmpleado int = NULL,
+    @Motivo varchar(255) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @IdTipoMovimientoStock int;
+    DECLARE @CantidadAAjustar int;
+
+    SET @Operacion = UPPER(LTRIM(RTRIM(@Operacion)));
+    SET @Motivo = LTRIM(RTRIM(@Motivo));
+
+    IF @IdProducto IS NULL OR @IdProducto <= 0
+        THROW 50071, 'El IdProducto es invalido.', 1;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+          AND Activo = 1
+    )
+        THROW 50070, 'El producto indicado no existe o no esta activo.', 1;
+
+    IF @Operacion IS NULL OR @Operacion NOT IN ('SUMAR', 'RESTAR')
+        THROW 50072, 'La operacion de stock debe ser SUMAR o RESTAR.', 1;
+
+    IF @Cantidad IS NULL OR @Cantidad <= 0
+        THROW 50073, 'La cantidad del ajuste debe ser mayor a cero.', 1;
+
+    IF @IdEmpleado IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+        FROM Empleados
+        WHERE IdEmpleado = @IdEmpleado
+          AND Activo = 1
+    )
+        THROW 50074, 'El empleado indicado no existe o no esta activo.', 1;
+
+    IF @Motivo = ''
+        SET @Motivo = NULL;
+
+    SET @CantidadAAjustar = CASE
+        WHEN @Operacion = 'SUMAR' THEN @Cantidad
+        ELSE -@Cantidad
+    END;
+
+    IF EXISTS (
+        SELECT 1
+        FROM Productos
+        WHERE IdProducto = @IdProducto
+          AND StockActual + @CantidadAAjustar < 0
+    )
+        THROW 50075, 'El ajuste no puede dejar stock negativo.', 1;
+
+    SELECT @IdTipoMovimientoStock = IdTipoMovimientoStock
+    FROM TiposMovimientoStock
+    WHERE Nombre = CASE
+        WHEN @Operacion = 'SUMAR' THEN 'Ajuste manual'
+        ELSE 'Ajuste negativo'
+    END;
+
+    IF @IdTipoMovimientoStock IS NULL
+        THROW 50076, 'No existe el tipo de movimiento de stock requerido.', 1;
+
+    BEGIN TRANSACTION;
+
+    BEGIN TRY
+        UPDATE Productos
+        SET StockActual = StockActual + @CantidadAAjustar
+        WHERE IdProducto = @IdProducto;
+
+        INSERT INTO MovimientosStock (
+            IdProducto,
+            IdTipoMovimientoStock,
+            IdEmpleado,
+            IdCompra,
+            IdVenta,
+            FechaMovimiento,
+            Cantidad,
+            Motivo
+        )
+        VALUES (
+            @IdProducto,
+            @IdTipoMovimientoStock,
+            @IdEmpleado,
+            NULL,
+            NULL,
+            SYSDATETIME(),
+            @Cantidad,
+            COALESCE(@Motivo, 'Ajuste manual de stock')
+        );
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        THROW;
+    END CATCH;
+
+    SELECT
+        IdProducto,
+        IdCategoria,
+        IdMarca,
+        IdTalle,
+        IdColor,
+        CodigoProducto,
+        Nombre,
+        Descripcion,
+        PrecioVenta,
+        StockActual,
+        StockMinimo,
+        Activo
+    FROM Productos
+    WHERE IdProducto = @IdProducto;
+END;
+GO
+
+
 -- SP_Producto_Actualizar
 IF OBJECT_ID(N'dbo.SP_Producto_Actualizar', N'P') IS NOT NULL
     DROP PROCEDURE dbo.SP_Producto_Actualizar;
@@ -2768,4 +2896,7 @@ BEGIN
     FROM Productos
     WHERE IdProducto = @IdProducto;
 END;
+GO
+
+SELECT 'Script completo ejecutado correctamente.' AS Resultado;
 GO
