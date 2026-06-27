@@ -145,7 +145,7 @@ namespace TiendaIndumentaria.App
             };
 
             var operaciones = new ToolStripMenuItem("Operaciones");
-            operaciones.DropDownItems.Add(CrearItemMenu("Nueva venta", () => AbrirFormularioRegistro(TipoRegistro.Venta)));
+            operaciones.DropDownItems.Add(CrearItemMenu("Nueva venta", AbrirFormularioVenta));
             operaciones.DropDownItems.Add(CrearItemMenu("Nueva compra", AbrirFormularioCompra));
 
             var registros = new ToolStripMenuItem("Registros");
@@ -328,19 +328,24 @@ namespace TiendaIndumentaria.App
                 return;
 
             _filaSeleccionada = _grilla.Rows[e.RowIndex];
-            bool permiteGestion = PermiteGestionarSeleccion();
-            bool estaActivo = ObtenerActivo(_filaSeleccionada);
+            bool permiteEditar = PermiteEditarSeleccion();
+            bool permiteCambiarEstado = PermiteCambiarEstadoSeleccion();
+            bool esVenta = ObtenerOpcionActual()?.TipoRegistro == TipoRegistro.Venta;
+            bool estaActivo = !esVenta && ObtenerActivo(_filaSeleccionada);
 
-            _menuEditar.Enabled = permiteGestion;
-            _menuCambiarEstado.Enabled = permiteGestion;
-            _menuCambiarEstado.Text = estaActivo ? "Inactivar" : "Activar";
+            _menuEditar.Enabled = permiteEditar;
+            _menuCambiarEstado.Enabled = permiteCambiarEstado;
+            _menuCambiarEstado.Text = esVenta
+                ? "Cambiar estado"
+                : estaActivo ? "Inactivar" : "Activar";
             _menuRegistro.Show(_grilla, _grilla.PointToClient(Cursor.Position));
         }
 
-        private bool PermiteGestionarSeleccion()
+        private bool PermiteEditarSeleccion()
         {
             TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
             return tipo == TipoRegistro.Proveedor ||
+                tipo == TipoRegistro.Cliente ||
                 tipo == TipoRegistro.Empleado ||
                 tipo == TipoRegistro.Producto ||
                 tipo == TipoRegistro.Categoria ||
@@ -349,22 +354,31 @@ namespace TiendaIndumentaria.App
                 tipo == TipoRegistro.Color;
         }
 
+        private bool PermiteCambiarEstadoSeleccion()
+        {
+            TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
+            return tipo == TipoRegistro.Venta || PermiteEditarSeleccion();
+        }
+
         private void ActualizarMenuGestionSeleccion()
         {
-            bool permiteGestion = _filaSeleccionada != null && PermiteGestionarSeleccion();
-            bool estaActivo = _filaSeleccionada != null && ObtenerActivo(_filaSeleccionada);
+            TipoRegistro? tipo = ObtenerOpcionActual()?.TipoRegistro;
+            bool esVenta = tipo == TipoRegistro.Venta;
+            bool permiteEditar = _filaSeleccionada != null && PermiteEditarSeleccion();
+            bool permiteCambiarEstado = _filaSeleccionada != null && PermiteCambiarEstadoSeleccion();
+            bool estaActivo = _filaSeleccionada != null && !esVenta && ObtenerActivo(_filaSeleccionada);
 
-            _menuPrincipalEditar.Enabled = permiteGestion;
-            _menuPrincipalCambiarEstado.Enabled = permiteGestion;
-            _menuPrincipalCambiarEstado.Text = estaActivo
-                ? "Inactivar seleccionado"
-                : "Activar seleccionado";
+            _menuPrincipalEditar.Enabled = permiteEditar;
+            _menuPrincipalCambiarEstado.Enabled = permiteCambiarEstado;
+            _menuPrincipalCambiarEstado.Text = esVenta
+                ? "Cambiar estado seleccionado"
+                : estaActivo ? "Inactivar seleccionado" : "Activar seleccionado";
         }
 
         private void EditarRegistroSeleccionado()
         {
             OpcionConsulta? opcion = ObtenerOpcionActual();
-            if (opcion == null || _filaSeleccionada == null || !PermiteGestionarSeleccion())
+            if (opcion == null || _filaSeleccionada == null || !PermiteEditarSeleccion())
                 return;
 
             if (!TryObtenerIdSeleccionado(opcion, out int idRegistro))
@@ -388,11 +402,17 @@ namespace TiendaIndumentaria.App
         private void CambiarEstadoRegistroSeleccionado()
         {
             OpcionConsulta? opcion = ObtenerOpcionActual();
-            if (opcion == null || _filaSeleccionada == null || !PermiteGestionarSeleccion())
+            if (opcion == null || _filaSeleccionada == null || !PermiteCambiarEstadoSeleccion())
                 return;
 
             if (!TryObtenerIdSeleccionado(opcion, out int idRegistro))
                 return;
+
+            if (opcion.TipoRegistro == TipoRegistro.Venta)
+            {
+                AbrirFormularioCambioEstadoVenta(idRegistro, _filaSeleccionada);
+                return;
+            }
 
             string entidad = NombreEntidad(opcion.TipoRegistro);
             bool estaActivo = ObtenerActivo(_filaSeleccionada);
@@ -408,7 +428,7 @@ namespace TiendaIndumentaria.App
 
             EjecutarOperacion(() =>
             {
-                CambiarEstado(opcion.TipoRegistro, idRegistro, estaActivo);
+                CambiarEstado(opcion.TipoRegistro, idRegistro, estaActivo, _filaSeleccionada);
 
                 RefrescarConsultaActual($"{MayusculaInicial(entidad)} {(estaActivo ? "inactivado" : "activado")} correctamente.");
             });
@@ -428,6 +448,24 @@ namespace TiendaIndumentaria.App
                 }
 
                 SeleccionarApartado(EntidadParaRegistro(tipoRegistro));
+                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+            }
+        }
+
+        private void AbrirFormularioVenta()
+        {
+            using (var formulario = new FormVenta())
+            {
+                if (formulario.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                if (formulario.Resultado == null)
+                {
+                    _etiquetaEstado.Text = formulario.MensajeResultado;
+                    return;
+                }
+
+                SeleccionarApartado("Ventas");
                 MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
             }
         }
@@ -458,6 +496,37 @@ namespace TiendaIndumentaria.App
                 }
 
                 SeleccionarApartado("Compras");
+                MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
+            }
+        }
+
+        private void AbrirFormularioCambioEstadoVenta(int idVenta, DataGridViewRow fila)
+        {
+            if (!TryObtenerEnteroFila(fila, "IdCliente", out int idCliente) ||
+                !TryObtenerEnteroFila(fila, "IdEmpleado", out int idEmpleado) ||
+                !TryObtenerEnteroFila(fila, "IdMedioPago", out int idMedioPago) ||
+                !TryObtenerEnteroFila(fila, "IdEstadoVenta", out int idEstadoVenta) ||
+                !TryObtenerDecimalFila(fila, "Total", out decimal total))
+            {
+                MessageBox.Show(
+                    "No se pudo leer la venta seleccionada.",
+                    "Venta requerida",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var formulario = new FormCambiarEstadoVenta(
+                idVenta,
+                idCliente,
+                idEmpleado,
+                idMedioPago,
+                idEstadoVenta,
+                total))
+            {
+                if (formulario.ShowDialog(this) != DialogResult.OK || formulario.Resultado == null)
+                    return;
+
                 MostrarDatos(formulario.Resultado, formulario.MensajeResultado);
             }
         }
@@ -539,6 +608,40 @@ namespace TiendaIndumentaria.App
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
             return false;
+        }
+
+        private static bool TryObtenerEnteroFila(DataGridViewRow fila, string columna, out int valor)
+        {
+            valor = 0;
+            if (fila.DataGridView == null || !fila.DataGridView.Columns.Contains(columna))
+                return false;
+
+            object? dato = fila.Cells[columna].Value;
+            if (dato == null || dato == DBNull.Value)
+                return false;
+
+            return int.TryParse(Convert.ToString(dato), out valor);
+        }
+
+        private static bool TryObtenerDecimalFila(DataGridViewRow fila, string columna, out decimal valor)
+        {
+            valor = 0;
+            if (fila.DataGridView == null || !fila.DataGridView.Columns.Contains(columna))
+                return false;
+
+            object? dato = fila.Cells[columna].Value;
+            if (dato == null || dato == DBNull.Value)
+                return false;
+
+            try
+            {
+                valor = Convert.ToDecimal(dato);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static Dictionary<string, string> ValoresParaEdicion(TipoRegistro tipoRegistro, DataGridViewRow fila)
@@ -635,6 +738,8 @@ namespace TiendaIndumentaria.App
             {
                 case TipoRegistro.Proveedor:
                     return "proveedor";
+                case TipoRegistro.Cliente:
+                    return "cliente";
                 case TipoRegistro.Empleado:
                     return "empleado";
                 case TipoRegistro.Producto:
@@ -652,7 +757,11 @@ namespace TiendaIndumentaria.App
             }
         }
 
-        private static void CambiarEstado(TipoRegistro? tipoRegistro, int idRegistro, bool estaActivo)
+        private static void CambiarEstado(
+            TipoRegistro? tipoRegistro,
+            int idRegistro,
+            bool estaActivo,
+            DataGridViewRow? fila)
         {
             switch (tipoRegistro)
             {
@@ -660,6 +769,22 @@ namespace TiendaIndumentaria.App
                     Conexion.EjecutarProcedimiento(
                         estaActivo ? "dbo.SP_Proveedor_Desactivar" : "dbo.SP_Proveedor_Reactivar",
                         ("@IdProveedor", idRegistro));
+                    break;
+
+                case TipoRegistro.Cliente:
+                    if (fila == null)
+                        return;
+
+                    Conexion.EjecutarProcedimientoConValidacion(
+                        "dbo.sp_actualizarCliente",
+                        "Cliente actualizado",
+                        ("@IdCliente", idRegistro),
+                        ("@Apellido", Texto(fila, "Apellido")),
+                        ("@Nombre", Texto(fila, "Nombre")),
+                        ("@Documento", Texto(fila, "Documento")),
+                        ("@Email", Texto(fila, "Email")),
+                        ("@Telefono", Texto(fila, "Telefono")),
+                        ("@Activo", !estaActivo));
                     break;
 
                 case TipoRegistro.Empleado:

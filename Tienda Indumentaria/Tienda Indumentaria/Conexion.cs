@@ -49,6 +49,35 @@ namespace TiendaIndumentaria.App
             return tabla;
         }
 
+        public static DataTable EjecutarProcedimientoConValidacion(
+            string nombreSp,
+            string mensajeExito,
+            params (string Nombre, object? Valor)[] parametros)
+        {
+            var tabla = new DataTable();
+            var mensajesSp = new List<string>();
+            using (var conexion = new SqlConnection(CadenaConexion))
+            using (var comando = new SqlCommand(nombreSp, conexion))
+            {
+                conexion.InfoMessage += (_, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Message))
+                        mensajesSp.Add(e.Message);
+                };
+
+                comando.CommandType = CommandType.StoredProcedure;
+                foreach (var (nombre, valor) in parametros)
+                    comando.Parameters.AddWithValue(nombre, valor ?? DBNull.Value);
+
+                conexion.Open();
+                using (var adaptador = new SqlDataAdapter(comando))
+                    adaptador.Fill(tabla);
+            }
+
+            ValidarMensajeSp(mensajesSp, mensajeExito);
+            return tabla;
+        }
+
         public static DataTable RegistrarCompraConDetalle(
             int idProveedor,
             int idEmpleado,
@@ -68,7 +97,7 @@ namespace TiendaIndumentaria.App
             using var transaccion = conexion.BeginTransaction();
             try
             {
-                EjecutarSpEnTransaccion(
+                DataTable compra = EjecutarSpTablaEnTransaccion(
                     conexion,
                     transaccion,
                     "sp_registrarCompra",
@@ -80,15 +109,10 @@ namespace TiendaIndumentaria.App
                 ValidarMensajeSp(mensajesSp, "Compra registrada");
                 mensajesSp.Clear();
 
-                int idCompra = ObtenerEscalarInt(
-                    conexion,
-                    transaccion,
-                    "SELECT TOP 1 IdCompra FROM Compras " +
-                    "WHERE IdProveedor = @IdProveedor AND IdEmpleado = @IdEmpleado AND Total = @Total " +
-                    "ORDER BY IdCompra DESC",
-                    ("@IdProveedor", idProveedor),
-                    ("@IdEmpleado", idEmpleado),
-                    ("@Total", total));
+                if (compra.Rows.Count == 0)
+                    throw new InvalidOperationException("No se pudo obtener la compra registrada.");
+
+                int idCompra = Convert.ToInt32(compra.Rows[0]["IdCompra"]);
 
                 foreach ((int idProducto, int cantidad, decimal precioUnitario) in detalles)
                 {
@@ -120,6 +144,67 @@ namespace TiendaIndumentaria.App
             }
         }
 
+        public static DataTable RegistrarVentaConDetalle(
+            int idCliente,
+            int idEmpleado,
+            int idMedioPago,
+            IReadOnlyList<(int IdProducto, int Cantidad)> detalles)
+        {
+            using var conexion = new SqlConnection(CadenaConexion);
+            var mensajesSp = new List<string>();
+            conexion.InfoMessage += (_, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Message))
+                    mensajesSp.Add(e.Message);
+            };
+
+            conexion.Open();
+            using var transaccion = conexion.BeginTransaction();
+            try
+            {
+                DataTable venta = EjecutarSpTablaEnTransaccion(
+                    conexion,
+                    transaccion,
+                    "sp_registrarVenta",
+                    ("@IdCliente", idCliente),
+                    ("@IdEmpleado", idEmpleado),
+                    ("@IdMedioPago", idMedioPago));
+
+                if (venta.Rows.Count == 0)
+                    throw new InvalidOperationException("No se pudo obtener la venta registrada.");
+
+                int idVenta = Convert.ToInt32(venta.Rows[0]["IdVenta"]);
+                mensajesSp.Clear();
+
+                foreach ((int idProducto, int cantidad) in detalles)
+                {
+                    EjecutarSpEnTransaccion(
+                        conexion,
+                        transaccion,
+                        "sp_registrarDetalleVenta",
+                        ("@IdVenta", idVenta),
+                        ("@IdProducto", idProducto),
+                        ("@Cantidad", cantidad));
+
+                    ValidarMensajeSp(mensajesSp, "Detalle de venta registrado");
+                    mensajesSp.Clear();
+                }
+
+                transaccion.Commit();
+
+                return EjecutarConsultaEnConexion(
+                    conexion,
+                    "SELECT IdVenta, IdCliente, IdEmpleado, IdMedioPago, IdEstadoVenta, FechaVenta, Total " +
+                    "FROM Ventas WHERE IdVenta = @IdVenta",
+                    ("@IdVenta", idVenta));
+            }
+            catch
+            {
+                transaccion.Rollback();
+                throw;
+            }
+        }
+
         public static void ProbarConexion()
         {
             using (var conexion = new SqlConnection(CadenaConexion))
@@ -143,6 +228,26 @@ namespace TiendaIndumentaria.App
                 comando.Parameters.AddWithValue(nombre, valor ?? DBNull.Value);
 
             comando.ExecuteNonQuery();
+        }
+
+        private static DataTable EjecutarSpTablaEnTransaccion(
+            SqlConnection conexion,
+            SqlTransaction transaccion,
+            string nombreSp,
+            params (string Nombre, object? Valor)[] parametros)
+        {
+            var tabla = new DataTable();
+            using var comando = new SqlCommand(nombreSp, conexion, transaccion)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            foreach (var (nombre, valor) in parametros)
+                comando.Parameters.AddWithValue(nombre, valor ?? DBNull.Value);
+
+            using var adaptador = new SqlDataAdapter(comando);
+            adaptador.Fill(tabla);
+            return tabla;
         }
 
         private static int ObtenerEscalarInt(

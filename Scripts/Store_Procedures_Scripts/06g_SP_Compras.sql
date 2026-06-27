@@ -9,6 +9,7 @@ CREATE PROCEDURE sp_registrarCompra
 AS
 BEGIN
     DECLARE @IdEstadoPendiente INT;
+    DECLARE @IdCompra INT;
 
 -- Limpiar espacios en blanco del numero de comprobante
     SET @NumeroComprobante = LTRIM(RTRIM(@NumeroComprobante));
@@ -92,6 +93,12 @@ BEGIN
 -- Registrar la compra arrancando siempre en pendiente.
     INSERT INTO Compras (IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total)
     VALUES (@IdProveedor, @IdEmpleado, @IdEstadoPendiente, SYSDATETIME(), @NumeroComprobante, @Total);
+
+    SET @IdCompra = CONVERT(INT, SCOPE_IDENTITY());
+
+    SELECT IdCompra, IdProveedor, IdEmpleado, IdEstadoCompra, FechaCompra, NumeroComprobante, Total
+    FROM Compras
+    WHERE IdCompra = @IdCompra;
 
     PRINT 'Compra registrada';
 END;

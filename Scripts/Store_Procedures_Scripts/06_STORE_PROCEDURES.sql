@@ -8,6 +8,7 @@ GO
 :r .\06e_SP_Colores.sql
 :r .\06f_SP_Clientes.sql
 :r .\06g_SP_Compras.sql
+:r .\06l_SP_Ventas.sql
 :r .\06h_SP_DetalleCompras.sql
 :r .\06i_SP_DetalleVentas.sql
 :r .\06j_SP_Categorias.sql

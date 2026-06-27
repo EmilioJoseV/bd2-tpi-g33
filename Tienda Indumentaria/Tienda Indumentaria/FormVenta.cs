@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
@@ -9,37 +8,37 @@ using System.Windows.Forms;
 
 namespace TiendaIndumentaria.App
 {
-    public class FormCompra : Form
+    public class FormVenta : Form
     {
-        private ComboBox _listaProveedores = null!;
+        private ComboBox _listaClientes = null!;
         private ComboBox _listaEmpleados = null!;
-        private TextBox _textoComprobante = null!;
+        private ComboBox _listaMediosPago = null!;
         private ComboBox _listaProductos = null!;
         private TextBox _textoCantidad = null!;
-        private TextBox _textoPrecioUnitario = null!;
         private DataGridView _grillaDetalle = null!;
         private Label _etiquetaTotal = null!;
         private Button _botonAgregar = null!;
         private Button _botonQuitar = null!;
         private Button _botonConfirmar = null!;
         private Button _botonCancelar = null!;
-        private readonly BindingList<LineaDetalleCompra> _detalle = new BindingList<LineaDetalleCompra>();
+        private readonly BindingList<LineaDetalleVenta> _detalle = new BindingList<LineaDetalleVenta>();
         private DataTable _productos = null!;
 
         public DataTable? Resultado { get; private set; }
         public string MensajeResultado { get; private set; } = string.Empty;
 
-        public FormCompra()
+        public FormVenta()
         {
             ConstruirInterfaz();
-            CargarProveedores();
+            CargarClientes();
             CargarEmpleados();
+            CargarMediosPago();
             CargarProductos();
         }
 
         private void ConstruirInterfaz()
         {
-            Text = "Registrar compra";
+            Text = "Registrar venta";
             Width = 820;
             Height = 620;
             MinimumSize = new Size(820, 620);
@@ -64,42 +63,34 @@ namespace TiendaIndumentaria.App
             contenedor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
 
-            _listaProveedores = CrearListaBusqueda();
+            _listaClientes = CrearListaBusqueda();
             _listaEmpleados = CrearListaBusqueda();
-            _textoComprobante = CrearTexto();
+            _listaMediosPago = CrearListaBusqueda();
             _listaProductos = CrearListaBusqueda();
             _textoCantidad = CrearTexto();
-            _textoPrecioUnitario = CrearTexto();
 
-            _listaProductos.SelectedIndexChanged += (_, _) => SugerirPrecioProducto();
-
-            contenedor.Controls.Add(CrearEtiqueta("Proveedor", true), 0, 0);
-            contenedor.Controls.Add(_listaProveedores, 1, 0);
+            contenedor.Controls.Add(CrearEtiqueta("Cliente", true), 0, 0);
+            contenedor.Controls.Add(_listaClientes, 1, 0);
             contenedor.Controls.Add(CrearEtiqueta("Empleado", true), 0, 1);
             contenedor.Controls.Add(_listaEmpleados, 1, 1);
-            contenedor.Controls.Add(CrearEtiqueta("Comprobante", false), 0, 2);
-            contenedor.Controls.Add(_textoComprobante, 1, 2);
+            contenedor.Controls.Add(CrearEtiqueta("Medio pago", true), 0, 2);
+            contenedor.Controls.Add(_listaMediosPago, 1, 2);
 
             var panelProducto = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 7,
+                ColumnCount = 4,
                 RowCount = 1,
                 Margin = new Padding(0)
             };
             panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 78));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 108));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
-            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
+            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
+            panelProducto.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 112));
 
             panelProducto.Controls.Add(_listaProductos, 0, 0);
-            panelProducto.Controls.Add(CrearEtiquetaInline("Cant."), 1, 0);
+            panelProducto.Controls.Add(CrearEtiquetaInline("Cantidad"), 1, 0);
             panelProducto.Controls.Add(_textoCantidad, 2, 0);
-            panelProducto.Controls.Add(CrearEtiquetaInline("Precio"), 3, 0);
-            panelProducto.Controls.Add(_textoPrecioUnitario, 4, 0);
 
             _botonAgregar = new Button
             {
@@ -109,18 +100,7 @@ namespace TiendaIndumentaria.App
                 UseVisualStyleBackColor = true
             };
             _botonAgregar.Click += (_, _) => AgregarProducto();
-
-            _botonQuitar = new Button
-            {
-                Text = "Quitar",
-                Dock = DockStyle.Fill,
-                Margin = new Padding(4, 4, 0, 4),
-                UseVisualStyleBackColor = true
-            };
-            _botonQuitar.Click += (_, _) => QuitarProductoSeleccionado();
-
-            panelProducto.Controls.Add(_botonAgregar, 5, 0);
-            panelProducto.Controls.Add(_botonQuitar, 6, 0);
+            panelProducto.Controls.Add(_botonAgregar, 3, 0);
 
             contenedor.Controls.Add(CrearEtiqueta("Producto", true), 0, 3);
             contenedor.Controls.Add(panelProducto, 1, 3);
@@ -139,26 +119,26 @@ namespace TiendaIndumentaria.App
             };
             _grillaDetalle.Columns.Add(new DataGridViewTextBoxColumn
             {
-                DataPropertyName = nameof(LineaDetalleCompra.Producto),
+                DataPropertyName = nameof(LineaDetalleVenta.Producto),
                 HeaderText = "Producto",
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
             });
             _grillaDetalle.Columns.Add(new DataGridViewTextBoxColumn
             {
-                DataPropertyName = nameof(LineaDetalleCompra.Cantidad),
+                DataPropertyName = nameof(LineaDetalleVenta.Cantidad),
                 HeaderText = "Cantidad",
                 Width = 90
             });
             _grillaDetalle.Columns.Add(new DataGridViewTextBoxColumn
             {
-                DataPropertyName = nameof(LineaDetalleCompra.PrecioUnitario),
+                DataPropertyName = nameof(LineaDetalleVenta.PrecioUnitario),
                 HeaderText = "Precio unit.",
                 Width = 110,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2" }
             });
             _grillaDetalle.Columns.Add(new DataGridViewTextBoxColumn
             {
-                DataPropertyName = nameof(LineaDetalleCompra.Subtotal),
+                DataPropertyName = nameof(LineaDetalleVenta.Subtotal),
                 HeaderText = "Subtotal",
                 Width = 110,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2" }
@@ -175,6 +155,15 @@ namespace TiendaIndumentaria.App
                 Font = new Font(SystemFonts.DefaultFont, FontStyle.Bold),
                 Text = "Total: $ 0,00"
             };
+
+            _botonQuitar = new Button
+            {
+                Text = "Quitar producto",
+                Width = 120,
+                Height = 30,
+                UseVisualStyleBackColor = true
+            };
+            _botonQuitar.Click += (_, _) => QuitarProductoSeleccionado();
 
             _botonConfirmar = new Button
             {
@@ -197,12 +186,14 @@ namespace TiendaIndumentaria.App
             var panelInferior = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 2,
+                ColumnCount = 3,
                 RowCount = 1
             };
+            panelInferior.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
             panelInferior.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             panelInferior.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230));
-            panelInferior.Controls.Add(_etiquetaTotal, 0, 0);
+            panelInferior.Controls.Add(_botonQuitar, 0, 0);
+            panelInferior.Controls.Add(_etiquetaTotal, 1, 0);
 
             var panelBotones = new FlowLayoutPanel
             {
@@ -212,7 +203,7 @@ namespace TiendaIndumentaria.App
             };
             panelBotones.Controls.Add(_botonConfirmar);
             panelBotones.Controls.Add(_botonCancelar);
-            panelInferior.Controls.Add(panelBotones, 1, 0);
+            panelInferior.Controls.Add(panelBotones, 2, 0);
 
             contenedor.Controls.Add(panelInferior, 0, 5);
             contenedor.SetColumnSpan(panelInferior, 2);
@@ -222,20 +213,20 @@ namespace TiendaIndumentaria.App
             Controls.Add(contenedor);
         }
 
-        private void CargarProveedores()
+        private void CargarClientes()
         {
             DataTable datos = Conexion.EjecutarConsulta(
-                "SELECT IdProveedor, RazonSocial, CUIT " +
-                "FROM Proveedores WHERE Activo = 1 ORDER BY RazonSocial");
+                "SELECT IdCliente, Apellido + ', ' + Nombre AS NombreCompleto, Documento " +
+                "FROM Clientes WHERE Activo = 1 ORDER BY Apellido, Nombre");
 
             datos.Columns.Add("DescripcionLista", typeof(string));
             foreach (DataRow fila in datos.Rows)
             {
-                fila["DescripcionLista"] = $"{fila["RazonSocial"]} - {fila["CUIT"]}";
+                fila["DescripcionLista"] = $"{fila["NombreCompleto"]} - {fila["Documento"]}";
             }
 
-            AgregarOpcionSeleccion(datos, "IdProveedor", "DescripcionLista", "Seleccione proveedor...");
-            ConfigurarLista(_listaProveedores, datos, "DescripcionLista", "IdProveedor");
+            AgregarOpcionSeleccion(datos, "IdCliente", "DescripcionLista", "Seleccione cliente...");
+            ConfigurarLista(_listaClientes, datos, "DescripcionLista", "IdCliente");
         }
 
         private void CargarEmpleados()
@@ -248,42 +239,36 @@ namespace TiendaIndumentaria.App
             ConfigurarLista(_listaEmpleados, datos, "NombreCompleto", "IdEmpleado");
         }
 
+        private void CargarMediosPago()
+        {
+            DataTable datos = Conexion.EjecutarConsulta(
+                "SELECT IdMedioPago, Nombre FROM MediosPago WHERE Activo = 1 ORDER BY Nombre");
+
+            AgregarOpcionSeleccion(datos, "IdMedioPago", "Nombre", "Seleccione medio de pago...");
+            ConfigurarLista(_listaMediosPago, datos, "Nombre", "IdMedioPago");
+        }
+
         private void CargarProductos()
         {
             _productos = Conexion.EjecutarConsulta(
-                "SELECT IdProducto, CodigoProducto, Nombre, PrecioVenta " +
+                "SELECT IdProducto, CodigoProducto, Nombre, PrecioVenta, StockActual " +
                 "FROM Productos WHERE Activo = 1 ORDER BY Nombre");
 
             _productos.Columns.Add("DescripcionLista", typeof(string));
             foreach (DataRow fila in _productos.Rows)
             {
-                fila["DescripcionLista"] = $"{fila["CodigoProducto"]} - {fila["Nombre"]}";
+                fila["DescripcionLista"] =
+                    $"{fila["CodigoProducto"]} - {fila["Nombre"]} (Stock: {fila["StockActual"]})";
             }
 
             AgregarOpcionSeleccion(_productos, "IdProducto", "DescripcionLista", "Seleccione producto...");
             ConfigurarLista(_listaProductos, _productos, "DescripcionLista", "IdProducto");
         }
 
-        private void SugerirPrecioProducto()
-        {
-            if (!TryObtenerIdSeleccionado(_listaProductos, out int idProducto))
-            {
-                _textoPrecioUnitario.Clear();
-                return;
-            }
-
-            DataRow? fila = _productos.AsEnumerable()
-                .FirstOrDefault(r => Convert.ToInt32(r["IdProducto"]) == idProducto);
-
-            if (fila == null)
-                return;
-
-            _textoPrecioUnitario.Text = Convert.ToDecimal(fila["PrecioVenta"]).ToString("N2");
-        }
-
         private void AgregarProducto()
         {
-            if (!TryObtenerIdSeleccionado(_listaProductos, out int idProducto))
+            if (_listaProductos.SelectedItem is not DataRowView producto ||
+                !TryObtenerIdSeleccionado(_listaProductos, out int idProducto))
             {
                 MostrarDatoInvalido(_listaProductos, "Seleccione un producto.");
                 return;
@@ -295,32 +280,17 @@ namespace TiendaIndumentaria.App
                 return;
             }
 
-            if (!TryObtenerDecimal(_textoPrecioUnitario.Text, out decimal precioUnitario) || precioUnitario < 0)
-            {
-                MostrarDatoInvalido(_textoPrecioUnitario, "Ingrese un precio unitario valido.");
-                return;
-            }
-
-            DataRow? filaProducto = _productos.AsEnumerable()
-                .FirstOrDefault(r => Convert.ToInt32(r["IdProducto"]) == idProducto);
-
-            if (filaProducto == null)
-            {
-                MostrarDatoInvalido(_listaProductos, "El producto seleccionado no es valido.");
-                return;
-            }
-
-            string descripcion = Convert.ToString(filaProducto["DescripcionLista"]) ?? string.Empty;
-            LineaDetalleCompra? existente = _detalle.FirstOrDefault(d => d.IdProducto == idProducto);
+            decimal precioUnitario = Convert.ToDecimal(producto["PrecioVenta"]);
+            string descripcion = Convert.ToString(producto["DescripcionLista"]) ?? string.Empty;
+            LineaDetalleVenta? existente = _detalle.FirstOrDefault(d => d.IdProducto == idProducto);
             if (existente != null)
             {
                 existente.Cantidad += cantidad;
-                existente.PrecioUnitario = precioUnitario;
                 _grillaDetalle.Refresh();
             }
             else
             {
-                _detalle.Add(new LineaDetalleCompra
+                _detalle.Add(new LineaDetalleVenta
                 {
                     IdProducto = idProducto,
                     Producto = descripcion,
@@ -330,14 +300,13 @@ namespace TiendaIndumentaria.App
             }
 
             _textoCantidad.Clear();
-            _textoPrecioUnitario.Clear();
             _listaProductos.SelectedIndex = 0;
             ActualizarTotal();
         }
 
         private void QuitarProductoSeleccionado()
         {
-            if (_grillaDetalle.CurrentRow?.DataBoundItem is not LineaDetalleCompra linea)
+            if (_grillaDetalle.CurrentRow?.DataBoundItem is not LineaDetalleVenta linea)
             {
                 MessageBox.Show(
                     "Seleccione un producto del detalle para quitar.",
@@ -353,9 +322,9 @@ namespace TiendaIndumentaria.App
 
         private void BtnConfirmar_Click(object? sender, EventArgs e)
         {
-            if (!TryObtenerIdSeleccionado(_listaProveedores, out int idProveedor))
+            if (!TryObtenerIdSeleccionado(_listaClientes, out int idCliente))
             {
-                MostrarDatoInvalido(_listaProveedores, "Seleccione un proveedor.");
+                MostrarDatoInvalido(_listaClientes, "Seleccione un cliente.");
                 return;
             }
 
@@ -365,35 +334,35 @@ namespace TiendaIndumentaria.App
                 return;
             }
 
+            if (!TryObtenerIdSeleccionado(_listaMediosPago, out int idMedioPago))
+            {
+                MostrarDatoInvalido(_listaMediosPago, "Seleccione un medio de pago.");
+                return;
+            }
+
             if (_detalle.Count == 0)
             {
                 MessageBox.Show(
-                    "Agregue al menos un producto a la compra.",
+                    "Agregue al menos un producto a la venta.",
                     "Detalle requerido",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
                 return;
             }
 
-            decimal total = _detalle.Sum(d => d.Subtotal);
-            string? comprobante = string.IsNullOrWhiteSpace(_textoComprobante.Text)
-                ? null
-                : _textoComprobante.Text.Trim();
-
             var lineas = _detalle
-                .Select(d => (d.IdProducto, d.Cantidad, d.PrecioUnitario))
+                .Select(d => (d.IdProducto, d.Cantidad))
                 .ToList();
 
             try
             {
-                Resultado = Conexion.RegistrarCompraConDetalle(
-                    idProveedor,
+                Resultado = Conexion.RegistrarVentaConDetalle(
+                    idCliente,
                     idEmpleado,
-                    comprobante,
-                    total,
+                    idMedioPago,
                     lineas);
 
-                MensajeResultado = "Compra registrada correctamente.";
+                MensajeResultado = "Venta registrada correctamente.";
                 DialogResult = DialogResult.OK;
                 Close();
             }
@@ -514,15 +483,6 @@ namespace TiendaIndumentaria.App
             return true;
         }
 
-        private static bool TryObtenerDecimal(string entrada, out decimal valor)
-        {
-            valor = 0;
-            entrada = entrada.Trim();
-            return decimal.TryParse(entrada, NumberStyles.Number, CultureInfo.CurrentCulture, out valor) ||
-                decimal.TryParse(entrada, NumberStyles.Number, CultureInfo.InvariantCulture, out valor) ||
-                decimal.TryParse(entrada.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out valor);
-        }
-
         private static void MostrarDatoInvalido(Control control, string mensaje)
         {
             MessageBox.Show(
@@ -533,7 +493,7 @@ namespace TiendaIndumentaria.App
             control.Focus();
         }
 
-        private sealed class LineaDetalleCompra
+        private sealed class LineaDetalleVenta
         {
             public int IdProducto { get; set; }
             public string Producto { get; set; } = string.Empty;

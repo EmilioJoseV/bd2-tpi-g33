@@ -239,7 +239,10 @@ namespace TiendaIndumentaria.App
 
             if (_tipoRegistro == TipoRegistro.Cliente)
             {
-                ConfirmarSinPersistir();
+                if (_modoEdicion)
+                    ActualizarCliente();
+                else
+                    RegistrarCliente();
                 return;
             }
 
@@ -331,6 +334,55 @@ namespace TiendaIndumentaria.App
                     ("@Direccion", ValorOpcional("Direccion")));
 
                 MensajeResultado = "Proveedor actualizado correctamente.";
+            });
+        }
+
+        private void RegistrarCliente()
+        {
+            EjecutarRegistro(() =>
+            {
+                Conexion.EjecutarProcedimientoConValidacion(
+                    "dbo.sp_registrarCliente",
+                    "Cliente registrado",
+                    ("@Apellido", ValorCampo("Apellido")),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Documento", ValorCampo("Documento")),
+                    ("@Email", ValorOpcional("Email")),
+                    ("@Telefono", ValorOpcional("Telefono")));
+
+                Resultado = Conexion.EjecutarConsulta(
+                    "SELECT IdCliente, Apellido, Nombre, Documento, Email, Telefono, Activo " +
+                    "FROM Clientes WHERE Documento = @Documento",
+                    ("@Documento", ValorCampo("Documento")));
+
+                MensajeResultado = "Cliente registrado correctamente.";
+            });
+        }
+
+        private void ActualizarCliente()
+        {
+            if (!_idRegistro.HasValue)
+                return;
+
+            EjecutarRegistro(() =>
+            {
+                Conexion.EjecutarProcedimientoConValidacion(
+                    "dbo.sp_actualizarCliente",
+                    "Cliente actualizado",
+                    ("@IdCliente", _idRegistro.Value),
+                    ("@Apellido", ValorCampo("Apellido")),
+                    ("@Nombre", ValorCampo("Nombre")),
+                    ("@Documento", ValorCampo("Documento")),
+                    ("@Email", ValorOpcional("Email")),
+                    ("@Telefono", ValorOpcional("Telefono")),
+                    ("@Activo", _activoInicial));
+
+                Resultado = Conexion.EjecutarConsulta(
+                    "SELECT IdCliente, Apellido, Nombre, Documento, Email, Telefono, Activo " +
+                    "FROM Clientes WHERE IdCliente = @IdCliente",
+                    ("@IdCliente", _idRegistro.Value));
+
+                MensajeResultado = "Cliente actualizado correctamente.";
             });
         }
 
@@ -758,9 +810,7 @@ namespace TiendaIndumentaria.App
             seleccion["Nombre"] = "Seleccione...";
             datos.Rows.InsertAt(seleccion, 0);
 
-            lista.DisplayMember = "Nombre";
-            lista.ValueMember = "Id";
-            lista.DataSource = datos;
+            ComboBusqueda.Configurar(lista, datos, "Id", "Nombre");
         }
 
         private static (string Tabla, string ColumnaId) DatosLista(string clave)
@@ -818,10 +868,10 @@ namespace TiendaIndumentaria.App
                 case TipoRegistro.Producto:
                     return new[]
                     {
-                        ("IdCategoria", "Id categoria", false),
-                        ("IdMarca", "Id marca", false),
-                        ("IdTalle", "Id talle", false),
-                        ("IdColor", "Id color", false),
+                        ("IdCategoria", "Categoria", false),
+                        ("IdMarca", "Marca", false),
+                        ("IdTalle", "Talle", false),
+                        ("IdColor", "Color", false),
                         ("CodigoProducto", "Codigo", false),
                         ("Nombre", "Nombre", false),
                         ("Descripcion", "Descripcion", false),

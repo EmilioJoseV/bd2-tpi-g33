@@ -151,9 +151,7 @@ namespace TiendaIndumentaria.App
             seleccion["DescripcionLista"] = "Seleccione...";
             datos.Rows.InsertAt(seleccion, 0);
 
-            _listaProductos.DisplayMember = "DescripcionLista";
-            _listaProductos.ValueMember = "IdProducto";
-            _listaProductos.DataSource = datos;
+            ComboBusqueda.Configurar(_listaProductos, datos, "IdProducto", "DescripcionLista");
         }
 
         private void CargarEmpleados()
@@ -167,9 +165,7 @@ namespace TiendaIndumentaria.App
             seleccion["NombreCompleto"] = "Sin empleado";
             datos.Rows.InsertAt(seleccion, 0);
 
-            _listaEmpleados.DisplayMember = "NombreCompleto";
-            _listaEmpleados.ValueMember = "IdEmpleado";
-            _listaEmpleados.DataSource = datos;
+            ComboBusqueda.Configurar(_listaEmpleados, datos, "IdEmpleado", "NombreCompleto");
         }
 
         private void BtnConfirmar_Click(object? sender, EventArgs e)
