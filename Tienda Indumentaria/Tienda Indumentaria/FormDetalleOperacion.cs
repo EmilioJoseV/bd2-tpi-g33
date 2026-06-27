@@ -124,6 +124,7 @@ namespace TiendaIndumentaria.App
                 _grilla.DataSource = datos;
                 OcultarColumnasInternas();
                 AplicarTitulosColumnas();
+                ConfigurarAnchoColumnas();
                 _etiquetaEstado.Text = $"{datos.Rows.Count} producto(s) en el detalle.";
                 ActualizarBotones();
             }
@@ -177,6 +178,21 @@ namespace TiendaIndumentaria.App
         {
             if (_grilla.Columns.Contains(columna))
                 _grilla.Columns[columna].HeaderText = titulo;
+        }
+
+        private void ConfigurarAnchoColumnas()
+        {
+            AsignarPesoColumna("CodigoProducto", 90);
+            AsignarPesoColumna("Producto", 220);
+            AsignarPesoColumna("Cantidad", 55);
+            AsignarPesoColumna("PrecioUnitario", 95);
+            AsignarPesoColumna("Subtotal", 85);
+        }
+
+        private void AsignarPesoColumna(string columna, int peso)
+        {
+            if (_grilla.Columns.Contains(columna))
+                _grilla.Columns[columna].FillWeight = peso;
         }
 
         private void ActualizarBotones()
