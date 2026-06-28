@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Windows.Forms;
 
 namespace TiendaIndumentaria.App
@@ -202,8 +203,6 @@ namespace TiendaIndumentaria.App
             consultas.DropDownItems.Add(CrearItemMenu("Proveedores", () => SeleccionarApartado("Proveedores")));
             consultas.DropDownItems.Add(CrearItemMenu("Clientes", () => SeleccionarApartado("Clientes")));
             consultas.DropDownItems.Add(CrearItemMenu("Empleados", () => SeleccionarApartado("Empleados")));
-            consultas.DropDownItems.Add(CrearItemMenu("Productos", () => SeleccionarApartado("Productos")));
-            consultas.DropDownItems.Add(CrearItemMenu("Productos bajo stock", () => SeleccionarApartado("ProductosBajoStock")));
             consultas.DropDownItems.Add(CrearItemMenu("Stock actual", () => SeleccionarApartado("StockActual")));
             consultas.DropDownItems.Add(CrearItemMenu("Ventas", () => SeleccionarApartado("Ventas")));
             consultas.DropDownItems.Add(CrearItemMenu("Filtrar ventas", AbrirConsultaVentas));
@@ -920,10 +919,10 @@ namespace TiendaIndumentaria.App
             {
                 return new Dictionary<string, string>
                 {
-                    ["IdCategoria"] = Texto(fila, "IdCategoria"),
-                    ["IdMarca"] = Texto(fila, "IdMarca"),
-                    ["IdTalle"] = Texto(fila, "IdTalle"),
-                    ["IdColor"] = Texto(fila, "IdColor"),
+                    ["IdCategoria"] = EnteroDesdeFila(fila, "IdCategoria"),
+                    ["IdMarca"] = EnteroDesdeFila(fila, "IdMarca"),
+                    ["IdTalle"] = EnteroDesdeFila(fila, "IdTalle"),
+                    ["IdColor"] = EnteroDesdeFila(fila, "IdColor"),
                     ["CodigoProducto"] = Texto(fila, "CodigoProducto"),
                     ["Nombre"] = Texto(fila, "Nombre"),
                     ["Descripcion"] = Texto(fila, "Descripcion"),
@@ -969,6 +968,26 @@ namespace TiendaIndumentaria.App
                 return string.Empty;
 
             return Convert.ToString(valor) ?? string.Empty;
+        }
+
+        private static string EnteroDesdeFila(DataGridViewRow fila, string columna)
+        {
+            if (fila.DataGridView == null || !fila.DataGridView.Columns.Contains(columna))
+                return string.Empty;
+
+            object? valor = fila.Cells[columna].Value;
+            if (valor == null || valor == DBNull.Value)
+                return string.Empty;
+
+            try
+            {
+                return Convert.ToInt32(valor, CultureInfo.InvariantCulture)
+                    .ToString(CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                return Texto(fila, columna);
+            }
         }
 
         private static string MayusculaInicial(string texto)

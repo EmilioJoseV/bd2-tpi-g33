@@ -42,10 +42,12 @@ namespace TiendaIndumentaria.App
         {
             bool esCompra = _tipoRegistro == TipoRegistro.Compra;
             Text = esCompra ? "Editar detalle de compra" : "Editar detalle de venta";
-            Width = 500;
-            Height = esCompra ? 220 : 180;
-            MinimumSize = new Size(500, Height);
-            MaximumSize = new Size(500, Height);
+            int filasDatos = esCompra ? 3 : 2;
+            int altoFormulario = esCompra ? 252 : 212;
+            Width = 520;
+            Height = altoFormulario;
+            MinimumSize = new Size(520, altoFormulario);
+            MaximumSize = new Size(520, altoFormulario);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -56,27 +58,28 @@ namespace TiendaIndumentaria.App
                 Dock = DockStyle.Fill,
                 Padding = new Padding(16),
                 ColumnCount = 2,
-                RowCount = esCompra ? 4 : 3
+                RowCount = filasDatos + 1
             };
-            contenedor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
+            contenedor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 115));
             contenedor.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
-            contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
-            if (esCompra)
-                contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
-            contenedor.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            for (int i = 0; i < filasDatos; i++)
+                contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+
+            contenedor.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
 
             _listaProductos = new ComboBox
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(0, 4, 0, 4)
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Margin = new Padding(0, 6, 0, 6)
             };
 
             _textoCantidad = new TextBox
             {
                 Dock = DockStyle.Fill,
                 BorderStyle = BorderStyle.FixedSingle,
-                Margin = new Padding(0, 4, 0, 4)
+                Margin = new Padding(0, 6, 0, 6)
             };
 
             contenedor.Controls.Add(CrearEtiqueta("Producto", true), 0, 0);
@@ -84,20 +87,20 @@ namespace TiendaIndumentaria.App
             contenedor.Controls.Add(CrearEtiqueta("Cantidad", true), 0, 1);
             contenedor.Controls.Add(_textoCantidad, 1, 1);
 
-            int filaBotones = 2;
             if (esCompra)
             {
                 _textoPrecioUnitario = new TextBox
                 {
                     Dock = DockStyle.Fill,
                     BorderStyle = BorderStyle.FixedSingle,
-                    Margin = new Padding(0, 4, 0, 4)
+                    Margin = new Padding(0, 6, 0, 6)
                 };
 
                 contenedor.Controls.Add(CrearEtiqueta("Precio unitario", true), 0, 2);
                 contenedor.Controls.Add(_textoPrecioUnitario, 1, 2);
-                filaBotones = 3;
             }
+
+            int filaBotones = filasDatos;
 
             _botonConfirmar = new Button
             {
@@ -122,7 +125,7 @@ namespace TiendaIndumentaria.App
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
-                Margin = new Padding(0, 12, 0, 0)
+                Padding = new Padding(0, 6, 0, 0)
             };
             panelBotones.Controls.Add(_botonConfirmar);
             panelBotones.Controls.Add(_botonCancelar);

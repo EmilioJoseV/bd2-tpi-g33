@@ -52,6 +52,7 @@ namespace TiendaIndumentaria.App
             ConstruirInterfaz();
             CargarValoresIniciales();
             ActualizarTotal();
+            Shown += (_, _) => AplicarSeleccionListas();
         }
 
         private void ConstruirInterfaz()
@@ -210,15 +211,20 @@ namespace TiendaIndumentaria.App
             foreach ((string clave, string valor) in _valoresIniciales)
             {
                 if (_campos.TryGetValue(clave, out TextBox? texto))
-                {
                     texto.Text = valor;
-                    continue;
-                }
+            }
 
+            AplicarSeleccionListas();
+        }
+
+        private void AplicarSeleccionListas()
+        {
+            foreach ((string clave, string valor) in _valoresIniciales)
+            {
                 if (_listas.TryGetValue(clave, out ComboBox? lista) &&
-                    int.TryParse(valor, out int idSeleccionado))
+                    TryConvertirEntero(valor, out int idSeleccionado))
                 {
-                    lista.SelectedValue = idSeleccionado;
+                    SeleccionarEnLista(lista, idSeleccionado);
                 }
             }
         }
@@ -802,18 +808,88 @@ namespace TiendaIndumentaria.App
                 clave == "IdColor";
         }
 
-        private static void CargarLista(ComboBox lista, string clave)
+        private void CargarLista(ComboBox lista, string clave)
         {
             (string Tabla, string ColumnaId) = DatosLista(clave);
+            string filtro = "Activo = 1";
+            if (_modoEdicion &&
+                _valoresIniciales.TryGetValue(clave, out string? idInicial) &&
+                TryConvertirEntero(idInicial, out int idSeleccionado) &&
+                idSeleccionado > 0)
+            {
+                filtro = $"(Activo = 1 OR {ColumnaId} = {idSeleccionado})";
+            }
+
             DataTable datos = Conexion.EjecutarConsulta(
-                $"SELECT {ColumnaId} AS Id, Nombre FROM {Tabla} WHERE Activo = 1 ORDER BY Nombre");
+                $"SELECT {ColumnaId} AS Id, Nombre FROM {Tabla} WHERE {filtro} ORDER BY Nombre");
 
             DataRow seleccion = datos.NewRow();
             seleccion["Id"] = 0;
             seleccion["Nombre"] = "Seleccione...";
             datos.Rows.InsertAt(seleccion, 0);
 
-            ComboBusqueda.Configurar(lista, datos, "Id", "Nombre");
+            lista.DisplayMember = "Nombre";
+            lista.ValueMember = "Id";
+            lista.DataSource = datos;
+            lista.DropDownStyle = ComboBoxStyle.DropDownList;
+        }
+
+        private static void SeleccionarEnLista(ComboBox lista, int id)
+        {
+            if (id <= 0)
+                return;
+
+            try
+            {
+                lista.SelectedValue = id;
+            }
+            catch (ArgumentException)
+            {
+                // SelectedValue puede fallar si el tipo no coincide exactamente.
+            }
+
+            if (lista.SelectedIndex > 0)
+                return;
+
+            for (int i = 0; i < lista.Items.Count; i++)
+            {
+                if (lista.Items[i] is not DataRowView fila ||
+                    fila["Id"] == DBNull.Value ||
+                    Convert.ToInt32(fila["Id"]) != id)
+                {
+                    continue;
+                }
+
+                lista.SelectedIndex = i;
+                return;
+            }
+        }
+
+        private static bool TryConvertirEntero(string? valor, out int resultado)
+        {
+            resultado = 0;
+            if (string.IsNullOrWhiteSpace(valor))
+                return false;
+
+            if (int.TryParse(valor, NumberStyles.Integer, CultureInfo.InvariantCulture, out resultado))
+                return true;
+
+            if (int.TryParse(valor, NumberStyles.Integer, CultureInfo.CurrentCulture, out resultado))
+                return true;
+
+            if (decimal.TryParse(valor, NumberStyles.Number, CultureInfo.CurrentCulture, out decimal decimalValor))
+            {
+                resultado = (int)decimalValor;
+                return true;
+            }
+
+            if (decimal.TryParse(valor, NumberStyles.Number, CultureInfo.InvariantCulture, out decimalValor))
+            {
+                resultado = (int)decimalValor;
+                return true;
+            }
+
+            return false;
         }
 
         private static (string Tabla, string ColumnaId) DatosLista(string clave)
